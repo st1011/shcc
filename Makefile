@@ -1,6 +1,6 @@
 COMPILER= gcc
 
-CFLAGS=-Wall -std=c11
+CFLAGS=-std=c11
 LDFLAGS	=
 
 LIBS	=
