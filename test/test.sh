@@ -6,9 +6,9 @@ try() {
 	expected="$1"
 	input="$2"
 
-	../bin/shcc "$input" > tmp.s
-	gcc -o tmp tmp.s
-	./tmp
+	../bin/shcc "$input" > out.s
+	gcc -o out out.s
+	./out
 	actual="$?"
 
 	if [ "$actual" = "$expected" ]; then
@@ -21,6 +21,9 @@ try() {
 
 try 0 0
 try 42 42
+
+try 21 '5+20-4'
+try 0 '0+0-0'
 
 echo OK
 
