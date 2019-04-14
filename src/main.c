@@ -157,7 +157,7 @@ static Node *new_node_num(int val)
 // 識別子ノード
 static Node *new_node_ident(char name)
 {
-    return new_node_body(ND_NUM, 0, 0, 0, name);
+    return new_node_body(ND_IDENT, 0, 0, 0, name);
 }
 
 // トークン解析失敗エラー
@@ -198,6 +198,12 @@ static Node *term(void)
     Token *tk = tokens->data[pos];
     if (tk->ty == TK_NUM) {
         Node *node = new_node_num(tk->val);
+        pos++;
+
+        return node;
+    }
+    if (tk->ty == TK_IDENT) {
+        Node *node = new_node_ident(tk->input[0]);
         pos++;
 
         return node;
@@ -296,6 +302,7 @@ static bool is_oneop(char ch)
     return ch == TK_PLUS || ch == TK_MINUS
         || ch == TK_MUL || ch == TK_DIV
         || ch == TK_PROPEN || ch == TK_PRCLOSE
+        || ch == TK_EQ
         || ch == TK_STMT;
 }
 
@@ -311,7 +318,7 @@ static void tokenize(char *p, Vector *tk)
         }
 
         // variables
-        if (*p >= 'a' && *p < 'z') {
+        if (*p >= 'a' && *p <= 'z') {
             vec_push_token(tk, TK_IDENT, 0, p);
             p++;
             continue;
