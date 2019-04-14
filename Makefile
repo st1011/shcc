@@ -31,6 +31,6 @@ all: clean $(TARGET)
 clean:
 	rm -f $(OBJS) $(DEPENDS) $(TARGET)
 
-test: $(TARGET)
+test: all
 	$(TESTDIR)/test.sh
 
