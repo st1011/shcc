@@ -304,7 +304,7 @@ static void gen_asm(Node *node)
         }
         case TK_DIV: {
             // div命令は rax =  ((rdx << 64) | rax) / rdi
-            printf("mov rdx, 0\n");
+            printf("  mov rdx, 0\n");
             printf("  div rdi\n");
             break;
         }
@@ -322,7 +322,7 @@ static void exit_with_asm(void)
     printf("main:\n");
 
     printf("  mov rax, 42\n");
-    printf("    ret\n");
+    printf("  ret\n");
 
     exit(1);
 }
@@ -361,7 +361,7 @@ int main(int argc, char **argv)
 
     // スタックトップの値をraxにロードしてからreturnする
     printf("  pop rax\n");
-    printf("    ret\n");
+    printf("  ret\n");
 
     return 0;
 }
