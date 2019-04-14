@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // トークンの型を表す値
 typedef enum {
@@ -37,12 +38,18 @@ typedef struct Node {
     int val;
 } Node;
 
+// ノード用ベクター
 typedef struct {
     void **data;
     int capacity;
     int len;
 } Vector;
 
+Vector *tokens = 0;
+//次のトークン位置
+int pos = 0;
+
+// 新規vector作成
 static Vector *new_vector(void)
 {
     Vector *vec = calloc(1, sizeof(Vector));
@@ -54,6 +61,8 @@ static Vector *new_vector(void)
     return vec;
 }
 
+// vectorへの要素追加
+// 空きがなければ2倍に拡張する
 static void vec_push(Vector *vec, void *elem)
 {
     if (vec->capacity == vec->len) {
@@ -64,6 +73,19 @@ static void vec_push(Vector *vec, void *elem)
     vec->data[vec->len++] = elem;
 }
 
+// vectorにtokenを追加
+static void vec_push_token(Vector *vec, int ty, int val, char *input)
+{
+    Token *tk = (Token *)calloc(1, sizeof(Token));
+
+    tk->ty = ty;
+    tk->val = val;
+    tk->input = input;
+
+    vec_push(vec, tk);
+}
+
+// 簡易テスト用
 static int expect(int line, int expected, int actual)
 {
     if (expected == actual) {
@@ -76,19 +98,20 @@ static int expect(int line, int expected, int actual)
     exit(1);
 }
 
+// vector用テスト
 void runtest(void)
 {
     Vector *vec = new_vector();
     expect(__LINE__, 0, vec->len);
 
     for (int i = 0; i < 100; i++) {
-        vec_push(vec, (void *)i);
+        vec_push(vec, (void *)(intptr_t)i);
     }
 
     expect(__LINE__, 100, vec->len);
-    expect(__LINE__, 0, (int)vec->data[0]);
-    expect(__LINE__, 50, (int)vec->data[50]);
-    expect(__LINE__, 99, (int)vec->data[99]);
+    expect(__LINE__, 0, (intptr_t)vec->data[0]);
+    expect(__LINE__, 50, (intptr_t)vec->data[50]);
+    expect(__LINE__, 99, (intptr_t)vec->data[99]);
 
     printf("OK\n");
 }
@@ -123,9 +146,6 @@ static Node *new_node_num(int val)
     return new_node_body(ND_NUM, 0, 0, val);
 }
 
-Token tokens[128] = {0};
-Token *current_token = 0;
-
 // トークン解析失敗エラー
 static void error(const char *msg, const Token *tk)
 {
@@ -137,36 +157,42 @@ static void error(const char *msg, const Token *tk)
 // 次トークンがtyか確認し、tyの時のみトークンを一つ進める
 static int consume(int ty)
 {
-    if (current_token->ty != ty) {
+    Token *tk = tokens->data[pos];
+
+    if (tk->ty != ty) {
         return 0;
     }
-    current_token++;
+    pos++;
 
     return 1;
 }
 
+// 末尾ノード 括弧か数値
 static Node *term(void)
 {
+    Token *tk = tokens->data[pos];
+
     if (consume(TK_PROPEN)) {
         Node *node = add();
 
         if (!consume(TK_PRCLOSE)) {
-            error("対応する閉じ括弧がありません", current_token);
+            error("対応する閉じ括弧がありません", tk);
         }
 
         return node;
     }
 
-    if (current_token->ty == TK_NUM) {
-        Node *node = new_node_num(current_token->val);
-        current_token++;
+    if (tk->ty == TK_NUM) {
+        Node *node = new_node_num(tk->val);
+        pos++;
 
         return node;
     }
 
-    error("数値でも開き括弧でもないトークンです", current_token);
+    error("数値でも開き括弧でもないトークンです", tk);
 }
 
+// かけ算、足し算ノード
 static Node *mul(void)
 {
     Node *node = term();
@@ -184,6 +210,7 @@ static Node *mul(void)
     }
 }
 
+// 先頭ノード 足し算、引き算
 static Node *add(void)
 {
     Node *node = mul();
@@ -218,7 +245,7 @@ static bool is_oneop(char ch)
 
 // トークナイズの実行
 // 出力はしない
-static void tokenize(char *p, Token *tk)
+static void tokenize(char *p, Vector *tk)
 {
     while (*p) {
         // skip space
@@ -228,18 +255,14 @@ static void tokenize(char *p, Token *tk)
         }
 
         if (is_oneop(*p)) {
-            tk->ty = *p;
-            tk->input = p;
-            tk++;
+            vec_push_token(tk, *p, 0, p);
             p++;
             continue;
         }
 
         if (isdigit(*p)) {
-            tk->ty = TK_NUM;
-            tk->input = p;
-            tk->val = strtol(p, &p, 10);
-            tk++;
+            char *bp = p;
+            vec_push_token(tk, TK_NUM, strtol(p, &p, 10), bp);
             continue;
         }
 
@@ -247,8 +270,7 @@ static void tokenize(char *p, Token *tk)
         exit(1);
     }
 
-    tk->ty = TK_EOF;
-    tk->input = p;
+    vec_push_token(tk, TK_EOF, 0, p);
 }
 
 // アセンブリ出力
@@ -289,9 +311,24 @@ static void gen_asm(Node *node)
     printf("  push rax\n");
 }
 
+// 適当なアセンブリを出力して終了する
+static void exit_with_asm(void)
+{
+    // アセンブリ 前半出力
+    printf(".intel_syntax noprefix\n");
+    printf(".global main\n");
+    printf("main:\n");
+
+    printf("  mov rax, 42\n");
+    printf("    ret\n");
+
+    exit(1);
+}
+
+// main
 int main(int argc, char **argv)
 {
-    if (argc == 2 && (strcmp(argv[1], "-test"))) {
+    if (argc == 2 && (strcmp(argv[1], "-test") == 0)) {
         runtest();
         return 0;
     }
@@ -302,7 +339,7 @@ int main(int argc, char **argv)
     }
 
     // initialize
-    current_token = tokens;
+    tokens = new_vector();
 
     // トークナイズ
     tokenize(argv[1], tokens);
