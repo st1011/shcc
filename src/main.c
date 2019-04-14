@@ -37,6 +37,64 @@ typedef struct Node {
     int val;
 } Node;
 
+typedef struct {
+    void **data;
+    int capacity;
+    int len;
+} Vector;
+
+static Vector *new_vector(void)
+{
+    Vector *vec = calloc(1, sizeof(Vector));
+
+    vec->data = calloc(16, sizeof(void *));
+    vec->capacity = 16;
+    vec->len = 0;
+
+    return vec;
+}
+
+static void vec_push(Vector *vec, void *elem)
+{
+    if (vec->capacity == vec->len) {
+        vec->capacity *= 2;
+        vec->data = realloc(vec->data, sizeof(void *) * vec->capacity);
+    }
+
+    vec->data[vec->len++] = elem;
+}
+
+static int expect(int line, int expected, int actual)
+{
+    if (expected == actual) {
+        return 0;
+    }
+
+    fprintf(stderr, "%d: %d expected, but got %d\n", 
+        line, expected, actual);
+
+    exit(1);
+}
+
+void runtest(void)
+{
+    Vector *vec = new_vector();
+    expect(__LINE__, 0, vec->len);
+
+    for (int i = 0; i < 100; i++) {
+        vec_push(vec, (void *)i);
+    }
+
+    expect(__LINE__, 100, vec->len);
+    expect(__LINE__, 0, (int)vec->data[0]);
+    expect(__LINE__, 50, (int)vec->data[50]);
+    expect(__LINE__, 99, (int)vec->data[99]);
+
+    printf("OK\n");
+}
+
+
+
 static Node *term(void);
 static Node *mul(void);
 static Node *add(void);
@@ -44,7 +102,7 @@ static Node *add(void);
 // ノード作成のbody
 static Node *new_node_body(int ty, Node *lhs, Node *rhs, int val)
 {
-    Node *node = malloc(sizeof(Node));
+    Node *node = calloc(1, sizeof(Node));
     node->ty = ty;
     node->lhs = lhs;
     node->rhs = rhs;
@@ -233,6 +291,11 @@ static void gen_asm(Node *node)
 
 int main(int argc, char **argv)
 {
+    if (argc == 2 && (strcmp(argv[1], "-test"))) {
+        runtest();
+        return 0;
+    }
+
     if (argc != 2) {
         fprintf(stderr, "引数の個数が正しくありません\n");
         return 1;

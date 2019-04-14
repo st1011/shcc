@@ -32,5 +32,6 @@ clean:
 	rm -f $(OBJS) $(DEPENDS) $(TARGET)
 
 test: all
+	$(TGTDIR)/$(TARGET) -test
 	$(TESTDIR)/test.sh
 
