@@ -40,14 +40,12 @@ int main(int argc, char **argv)
     printf("  sub rsp, %d\n", ('z' - 'a' + 1) * 8);
 
     // 先頭の式から順にコード生成
-    Node **cd = code;
-    while (*cd) {
-        gen_asm(*cd);
+    for (int i = 0; code->data[i]; i++) {
+        gen_asm((Node *)code->data[i]);
 
         // 式の評価結果としてpushされた値が一つあるので
         // スタックがあふれないようにpopする
         printf("  pop rax\n");
-        cd++;
     }
 
     // エピローグ

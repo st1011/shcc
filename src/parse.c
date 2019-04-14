@@ -8,7 +8,7 @@
 #include "shcc.h"
 
 // ノードリスト
-Node *code[128] = {0};
+Vector *code = 0;
 
 //次のトークン位置
 int pos = 0;
@@ -178,7 +178,7 @@ static Node *stmt(void)
 // プログラム全体のノード作成
 void program(void)
 {
-    Node **cd = code;
+    code = new_vector();
 
     for (;;) {
         Token *tk = tokens->data[pos];
@@ -187,8 +187,8 @@ void program(void)
             break;
         }
 
-        *cd++ = stmt();
+        vec_push(code, stmt());
     }
 
-    *cd = 0;
+    vec_push(code, NULL);
 }

@@ -65,9 +65,10 @@ typedef struct {
 
 
 extern Vector *tokens;
-extern Node *code[128];
+extern Vector *code;
 
 Vector *new_vector(void);
+void vec_push(Vector *vec, void *elem);
 void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input);
 
 Map *new_map(void);

@@ -21,7 +21,7 @@ Vector *new_vector(void)
 
 // vectorへの要素追加
 // 空きがなければ2倍に拡張する
-static void vec_push(Vector *vec, void *elem)
+void vec_push(Vector *vec, void *elem)
 {
     if (vec->capacity == vec->len) {
         vec->capacity *= 2;
