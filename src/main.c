@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define NUMOF(ary)          (sizeof(ary) / sizeof((ary)[0]))
+
 // トークンの型を表す値
 typedef enum {
     TK_PLUS = '+',
@@ -13,15 +15,13 @@ typedef enum {
     TK_DIV = '/',
     TK_PROPEN = '(',
     TK_PRCLOSE = ')',
+    TK_EQ = '=',
+    TK_STMT = ';',
 
-    TK_NUM = 0x100,
-    TK_EOF,
+    TK_NUM = 0x100,     // 整数
+    TK_IDENT,           // 識別子
+    TK_EOF,             // 終端
 } TokenType_t;
-
-// ノードの型を表す値
-typedef enum {
-    ND_NUM = 0x100, // 整数のノードの型
-} NodeType_t;
 
 // トークンの型
 typedef struct {
@@ -30,12 +30,19 @@ typedef struct {
     char *input;    // トークン文字列（エラーメッセージ用）
 } Token;
 
+// ノードの型を表す値
+typedef enum {
+    ND_NUM = 0x100, // 整数のノードの型
+    ND_IDENT,       // 識別子のノードの型
+} NodeType_t;
+
 // 抽象構文木ノード
 typedef struct Node {
     int ty;
     struct Node *lhs;
     struct Node *rhs;
-    int val;
+    int val;                // ND_NUMの場合の数値
+    char name;              // ND_IDENTの場合の名前
 } Node;
 
 // ノード用ベクター
@@ -123,13 +130,14 @@ static Node *mul(void);
 static Node *add(void);
 
 // ノード作成のbody
-static Node *new_node_body(int ty, Node *lhs, Node *rhs, int val)
+static Node *new_node_body(int ty, Node *lhs, Node *rhs, int val, char name)
 {
     Node *node = calloc(1, sizeof(Node));
     node->ty = ty;
     node->lhs = lhs;
     node->rhs = rhs;
     node->val = val;
+    node->name = name;
 
     return node;
 }
@@ -137,18 +145,25 @@ static Node *new_node_body(int ty, Node *lhs, Node *rhs, int val)
 // 通常ノード
 static Node *new_node(int ty, Node *lhs, Node *rhs)
 {
-    return new_node_body(ty, lhs, rhs, 0);
+    return new_node_body(ty, lhs, rhs, 0, 0);
 }
 
 // 数値ノード
 static Node *new_node_num(int val)
 {
-    return new_node_body(ND_NUM, 0, 0, val);
+    return new_node_body(ND_NUM, 0, 0, val, 0);
+}
+
+// 識別子ノード
+static Node *new_node_ident(char name)
+{
+    return new_node_body(ND_NUM, 0, 0, 0, name);
 }
 
 // トークン解析失敗エラー
-static void error(const char *msg, const Token *tk)
+static void error(const char *msg)
 {
+    Token *tk = tokens->data[pos];
     fprintf(stderr, "%s: %s\n", msg, tk->input);
 
     exit(1);
@@ -170,18 +185,17 @@ static int consume(int ty)
 // 末尾ノード 括弧か数値
 static Node *term(void)
 {
-    Token *tk = tokens->data[pos];
-
     if (consume(TK_PROPEN)) {
         Node *node = add();
 
         if (!consume(TK_PRCLOSE)) {
-            error("対応する閉じ括弧がありません", tk);
+            error("対応する閉じ括弧がありません");
         }
 
         return node;
     }
 
+    Token *tk = tokens->data[pos];
     if (tk->ty == TK_NUM) {
         Node *node = new_node_num(tk->val);
         pos++;
@@ -189,7 +203,7 @@ static Node *term(void)
         return node;
     }
 
-    error("数値でも開き括弧でもないトークンです", tk);
+    error("数値でも開き括弧でもないトークンです");
 
     return 0;
 }
@@ -230,10 +244,49 @@ static Node *add(void)
     }
 }
 
-// パース用のラッパー
-static Node *parse(void)
+// 一つの式ノード
+static Node *assign(void)
 {
-    return add();
+    Node *node = add();
+
+    while (consume(TK_EQ)) {
+        node = new_node(TK_EQ, node, assign());
+    }
+
+    return node;
+}
+
+// ステートメントノード
+static Node *stmt(void)
+{
+    Node *node = assign();
+
+    if (!consume(TK_STMT)) {
+        error("';'で終わらないトークンです");
+    }
+
+    return node;
+}
+
+// ノードリスト
+Node *code[128] = {0};
+
+// プログラム全体のノード作成
+static void program(void)
+{
+    Node **cd = code;
+
+    for (;;) {
+        Token *tk = tokens->data[pos];
+
+        if (tk->ty == TK_EOF) {
+            break;
+        }
+
+        *cd++ = stmt();
+    }
+
+    *cd = 0;
 }
 
 // 一文字式か？
@@ -242,7 +295,8 @@ static bool is_oneop(char ch)
     // 数値以外で1文字式
     return ch == TK_PLUS || ch == TK_MINUS
         || ch == TK_MUL || ch == TK_DIV
-        || ch == TK_PROPEN || ch == TK_PRCLOSE;
+        || ch == TK_PROPEN || ch == TK_PRCLOSE
+        || ch == TK_STMT;
 }
 
 // トークナイズの実行
@@ -256,12 +310,21 @@ static void tokenize(char *p, Vector *tk)
             continue;
         }
 
+        // variables
+        if (*p >= 'a' && *p < 'z') {
+            vec_push_token(tk, TK_IDENT, 0, p);
+            p++;
+            continue;
+        }
+
+        // operand
         if (is_oneop(*p)) {
             vec_push_token(tk, *p, 0, p);
             p++;
             continue;
         }
 
+        // number
         if (isdigit(*p)) {
             char *bp = p;
             vec_push_token(tk, TK_NUM, strtol(p, &p, 10), bp);
@@ -275,11 +338,46 @@ static void tokenize(char *p, Vector *tk)
     vec_push_token(tk, TK_EOF, 0, p);
 }
 
+// 左辺値のアセンブリ出力
+// 該当アドレスをpush
+void gen_asm_lval(Node *node)
+{
+    if (node->ty != ND_IDENT) {
+        error("代入の左辺値が変数ではありません");
+    }
+
+    int offset = ('z' - node->name + 1) * 8;
+    printf("  mov rax, rbp\n");
+    printf("  sub rax, %d\n", offset);
+    printf("  push rax\n");
+}
+
 // アセンブリ出力
 static void gen_asm(Node *node)
 {
     if (node->ty == ND_NUM) {
         printf("  push %d\n", node->val);
+        return;
+    }
+
+    if (node->ty == ND_IDENT) {
+        // ここは右辺値の識別子
+        // 一度左辺値としてpushした値をpopして使う
+        gen_asm_lval(node);
+        printf("  pop rax\n");
+        printf("  mov rax, [rax]\n");
+        printf("  push rax\n");
+        return;
+    }
+
+    if (node->ty == TK_EQ) {
+        // 代入式なら、必ず左辺は変数
+        gen_asm_lval(node->lhs);
+        gen_asm(node->rhs);
+        printf("  pop rdi\n");
+        printf("  pop rax\n");
+        printf("  mov [rax], rdi\n");
+        printf("  push rdi\n");
         return;
     }
 
@@ -350,17 +448,35 @@ int main(int argc, char **argv)
     tokenize(argv[1], tokens);
 
     // パース
-    Node *node = parse();
+    program();
 
     // アセンブリ 前半出力
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
     printf("main:\n");
 
-    gen_asm(node);
+    // アセンブリ プロローグ
+    printf("  push rbp\n");     // 呼び出し元のベースポインタを保存
+    printf("  mov rbp, rsp\n");
+    // 現在の言語仕様に存在する変数領域を一括で待避する
+    printf("  sub rsp, %d\n", ('z' - 'a' + 1) * 8);
 
-    // スタックトップの値をraxにロードしてからreturnする
-    printf("  pop rax\n");
+    // 先頭の式から順にコード生成
+    Node **cd = code;
+    while (*cd) {
+        gen_asm(*cd);
+
+        // 式の評価結果としてpushされた値が一つあるので
+        // スタックがあふれないようにpopする
+        printf("  pop rax\n");
+        cd++;
+    }
+
+    // エピローグ
+    // 戻り値は最後の評価結果のrax値
+    // ポインタを戻す
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
     printf("  ret\n");
 
     return 0;
