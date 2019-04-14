@@ -190,6 +190,8 @@ static Node *term(void)
     }
 
     error("数値でも開き括弧でもないトークンです", tk);
+
+    return 0;
 }
 
 // かけ算、足し算ノード
@@ -328,6 +330,9 @@ static void exit_with_asm(void)
 // main
 int main(int argc, char **argv)
 {
+    // exit_with_asm are not used
+    (void)exit_with_asm;
+
     if (argc == 2 && (strcmp(argv[1], "-test") == 0)) {
         runtest();
         return 0;
