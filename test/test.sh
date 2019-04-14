@@ -43,5 +43,10 @@ try 10 'a = 10;'
 try 22 'a=10; b=12 ;c=a+b;'
 try 128 'a=20;a=10;z=12;y=30;x=22;z*a+y-x;'
 
+try 128 'a=20;a=10;z=12;y=30;x=22;return z*a+y-x;'
+try 12 'a=20;a=10;z=12;y=30;x=22;z*a+y-x; return z;'
+try 20 'a=20;return a;a=10;z=12;y=30;x=22;z*a+y-x;'
+try 20 'a=20;return a;a=10;return a;z=12;y=30;x=22;z*a+y-x;'
+
 echo OK
 
