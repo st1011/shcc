@@ -2,12 +2,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 // トークンの型を表す値
-enum {
+typedef enum {
+    TK_PLUS = '+',
+    TK_MINUS = '-',
+    TK_MUL = '*',
+    TK_DIV = '/',
+    TK_PROPEN = '(',
+    TK_PRCLOSE = ')',
+
     TK_NUM = 0x100,
     TK_EOF,
-};
+} TokenType_t;
+
+// ノードの型を表す値
+typedef enum {
+    ND_NUM = 0x100, // 整数のノードの型
+} NodeType_t;
 
 // トークンの型
 typedef struct {
@@ -16,7 +29,134 @@ typedef struct {
     char *input;    // トークン文字列（エラーメッセージ用）
 } Token;
 
-Token tokens[128];
+// 抽象構文木ノード
+typedef struct Node {
+    int ty;
+    struct Node *lhs;
+    struct Node *rhs;
+    int val;
+} Node;
+
+static Node *term(void);
+static Node *mul(void);
+static Node *add(void);
+
+// ノード作成のbody
+static Node *new_node_body(int ty, Node *lhs, Node *rhs, int val)
+{
+    Node *node = malloc(sizeof(Node));
+    node->ty = ty;
+    node->lhs = lhs;
+    node->rhs = rhs;
+    node->val = val;
+
+    return node;
+}
+
+// 通常ノード
+static Node *new_node(int ty, Node *lhs, Node *rhs)
+{
+    return new_node_body(ty, lhs, rhs, 0);
+}
+
+// 数値ノード
+static Node *new_node_num(int val)
+{
+    return new_node_body(ND_NUM, 0, 0, val);
+}
+
+Token tokens[128] = {0};
+Token *current_token = 0;
+
+// トークン解析失敗エラー
+static void error(const char *msg, const Token *tk)
+{
+    fprintf(stderr, "%s: %s\n", msg, tk->input);
+
+    exit(1);
+}
+
+// 次トークンがtyか確認し、tyの時のみトークンを一つ進める
+static int consume(int ty)
+{
+    if (current_token->ty != ty) {
+        return 0;
+    }
+    current_token++;
+
+    return 1;
+}
+
+static Node *term(void)
+{
+    if (consume(TK_PROPEN)) {
+        Node *node = add();
+
+        if (!consume(TK_PRCLOSE)) {
+            error("対応する閉じ括弧がありません", current_token);
+        }
+
+        return node;
+    }
+
+    if (current_token->ty == TK_NUM) {
+        Node *node = new_node_num(current_token->val);
+        current_token++;
+
+        return node;
+    }
+
+    error("数値でも開き括弧でもないトークンです", current_token);
+}
+
+static Node *mul(void)
+{
+    Node *node = term();
+
+    for (;;) {
+        if (consume(TK_MUL)) {
+            node = new_node(TK_MUL, node, term());
+        }
+        else if (consume(TK_DIV)) {
+            node = new_node(TK_DIV, node, term());
+        }
+        else {
+            return node;
+        }
+    }
+}
+
+static Node *add(void)
+{
+    Node *node = mul();
+
+    for (;;) {
+        if (consume(TK_PLUS)) {
+            node = new_node(TK_PLUS, node, mul());
+        }
+        else if (consume(TK_MINUS)) {
+            node = new_node(TK_MINUS, node, mul());
+        }
+        else {
+            return node;
+        }
+    }
+}
+
+// パース用のラッパー
+static Node *parse(void)
+{
+    return add();
+}
+
+// 一文字式か？
+static bool is_oneop(char ch)
+{
+    // 数値以外で1文字式
+    return ch == TK_PLUS || ch == TK_MINUS
+        || ch == TK_MUL || ch == TK_DIV
+        || ch == TK_PROPEN || ch == TK_PRCLOSE;
+}
 
 // トークナイズの実行
 // 出力はしない
@@ -29,7 +169,7 @@ static void tokenize(char *p, Token *tk)
             continue;
         }
 
-        if (*p == '+' || *p == '-') {
+        if (is_oneop(*p)) {
             tk->ty = *p;
             tk->input = p;
             tk++;
@@ -53,57 +193,42 @@ static void tokenize(char *p, Token *tk)
     tk->input = p;
 }
 
-static void error(const Token *tk)
+// アセンブリ出力
+static void gen_asm(Node *node)
 {
-    fprintf(stderr, "予期しないトークンです: %s\n",
-        tk->input);
-
-    exit(1);
-}
-
-// トークンリストからアセンブリを出力
-static void print_tokens(const Token *tk)
-{
-    // 式の最初は数値の必要がある
-    if (tk->ty != TK_NUM) {
-        error(0);
+    if (node->ty == ND_NUM) {
+        printf("  push %d\n", node->val);
+        return;
     }
 
-    // 最初の命令
-    printf("  mov rax, %d\n", tk->val);
+    gen_asm(node->lhs);
+    gen_asm(node->rhs);
 
-    tk++;
-    while (tk->ty != TK_EOF) {
-        switch (tk->ty) {
-            case '+': {
-                tk++;
-                if (tk->ty != TK_NUM) {
-                    error(tk);
-                }
-                
-                printf("  add rax, %d\n", tk->val);
-                tk++;
+    printf("  pop rdi\n");  // 右辺の値
+    printf("  pop rax\n");  // 左辺の値
 
-                continue;
-            }
-
-            case '-': {
-                tk++;
-                if (tk->ty != TK_NUM) {
-                    error(tk);
-                }
-                
-                printf("  sub rax, %d\n", tk->val);
-                tk++;
-
-                continue;
-            }
-
-            default: {
-                error(tk);
-            }
+    switch (node->ty) {
+        case TK_PLUS: {
+            printf("  add rax, rdi\n");
+            break;
+        }
+        case TK_MINUS: {
+            printf("  sub rax, rdi\n");
+            break;
+        }
+        case TK_MUL: {
+            printf("  mul rdi\n");
+            break;
+        }
+        case TK_DIV: {
+            // div命令は rax =  ((rdx << 64) | rax) / rdi
+            printf("mov rdx, 0\n");
+            printf("  div rdi\n");
+            break;
         }
     }
+
+    printf("  push rax\n");
 }
 
 int main(int argc, char **argv)
@@ -113,16 +238,24 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // initialize
+    current_token = tokens;
+
     // トークナイズ
     tokenize(argv[1], tokens);
+
+    // パース
+    Node *node = parse();
 
     // アセンブリ 前半出力
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
     printf("main:\n");
 
-    print_tokens(tokens);
+    gen_asm(node);
 
+    // スタックトップの値をraxにロードしてからreturnする
+    printf("  pop rax\n");
     printf("    ret\n");
 
     return 0;
