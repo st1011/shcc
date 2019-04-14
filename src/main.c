@@ -61,6 +61,12 @@ typedef struct {
     int len;
 } Vector;
 
+// 連想配列用マップ
+typedef struct {
+    Vector *keys;
+    Vector *vals;
+} Map;
+
 Vector *tokens = 0;
 //次のトークン位置
 int pos = 0;
@@ -101,6 +107,37 @@ static void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input)
     vec_push(vec, tk);
 }
 
+// 新しいマップの作成
+static Map *new_map(void)
+{
+    Map *map = calloc(1, sizeof(Map));
+
+    map->keys = new_vector();
+    map->vals = new_vector();
+
+    return map;
+}
+
+// マップへの値追加
+static void map_put(Map *map, char *key, void *val)
+{
+    vec_push(map->keys, key);
+    vec_push(map->vals, val);
+}
+
+// マップからの値取得
+static void *map_get(Map *map, char *key)
+{
+    // 末尾から探すので、古いデータを上書きする必要が無い
+    for (int i = map->keys->len - 1; i >= 0; i--) {
+        if (strcmp(map->keys->data[i], key) == 0) {
+            return map->vals->data[i];
+        }
+    }
+
+    return NULL;
+}
+
 // 簡易テスト用
 static int expect(int line, int expected, int actual)
 {
@@ -114,22 +151,50 @@ static int expect(int line, int expected, int actual)
     exit(1);
 }
 
-// vector用テスト
-void runtest(void)
+#define EXPECT(exp, act)        expect(__LINE__, (exp), (act))
+
+// vector関係のテスト
+static void test_vector(void)
 {
     Vector *vec = new_vector();
-    expect(__LINE__, 0, vec->len);
+    EXPECT(0, vec->len);
 
     for (int i = 0; i < 100; i++) {
         vec_push(vec, (void *)(intptr_t)i);
     }
 
-    expect(__LINE__, 100, vec->len);
-    expect(__LINE__, 0, (intptr_t)vec->data[0]);
-    expect(__LINE__, 50, (intptr_t)vec->data[50]);
-    expect(__LINE__, 99, (intptr_t)vec->data[99]);
+    EXPECT(100, vec->len);
+    EXPECT(0, (intptr_t)vec->data[0]);
+    EXPECT(50, (intptr_t)vec->data[50]);
+    EXPECT(99, (intptr_t)vec->data[99]);
+}
 
-    printf("OK\n");
+// map関係のテスト
+static void test_map(void)
+{
+    Map *map = new_map();
+    EXPECT(0, (intptr_t)map_get(map, "foo"));
+
+    map_put(map, "foo", (void *)(intptr_t)2);
+    EXPECT(2, (intptr_t)map_get(map, "foo"));
+
+    map_put(map, "bar", (void *)(intptr_t)4);
+    EXPECT(4, (intptr_t)map_get(map, "bar"));
+    EXPECT(2, (intptr_t)map_get(map, "foo"));
+
+    map_put(map, "foo", (void *)(intptr_t)6);
+    EXPECT(6, (intptr_t)map_get(map, "foo"));
+
+
+}
+
+// vector用テスト
+void runtest(void)
+{
+    test_vector();
+    test_map();
+
+    printf("    runtest OK\n");
 }
 
 
