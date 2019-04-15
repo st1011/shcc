@@ -61,8 +61,18 @@ void map_put(Map *map, char *key, void *val)
     vec_push(map->vals, val);
 }
 
+// マップへの整数値追加
+// 一応メモリを割り当てる
+void map_puti(Map *map, char *key, int val)
+{
+    int *v = (int *)calloc(1, sizeof(int));
+
+    *v = val;
+    map_put(map, key, v);
+}
+
 // マップからの値取得
-void *map_get(Map *map, char *key)
+void *map_get(const Map *map, char *key)
 {
     // 末尾から探すので、古いデータを上書きする必要が無い
     for (int i = map->keys->len - 1; i >= 0; i--) {
@@ -73,6 +83,19 @@ void *map_get(Map *map, char *key)
 
     return NULL;
 }
+
+// マップからの値取得
+int map_geti(const Map *map, char *key)
+{
+    int *v = map_get(map, key);
+
+    if (v != NULL) {
+        return *v;
+    }
+
+    return 0;
+}
+
 
 // 簡易テスト用
 static int expect(int line, int expected, int actual)

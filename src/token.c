@@ -20,11 +20,51 @@ static bool is_oneop(char ch)
         || ch == TK_STMT;
 }
 
+// 特殊キーワードのマップを生成・取得
+static Map *get_keywords(void)
+{
+    Map *keywords = new_map();
+
+    map_puti(keywords, "return", TK_RETURN);
+
+    return keywords;
+}
+
+// キーワード文字列を抜き出す
+// キーワードが見つからなければfalse returnで何もしない
+static bool keyword(Vector *tk, const Map *keywords, char **pp)
+{
+    int len = 1;
+    char *p = *pp;
+    while (isalpha(p[len]) || isdigit(p[len]) || p[len] == '_') {
+        len++;
+    }
+    char *name = (char *)calloc(len + 1, sizeof(char));
+    strncpy(name, p, len);
+    name[len] = '\0';
+
+    int ty = map_geti(keywords, name);
+
+    // キーワードではなかった
+    if (ty == 0) {
+        return false;
+    }
+
+    vec_push_token(tk, ty, 0, name);
+    p += len;
+
+    *pp = p;
+
+    return true;
+}
+
+
 // トークナイズの実行
 // 出力はしない
 Vector *tokenize(char *p)
 {
     Vector *tk = new_vector();
+    Map *keywords = get_keywords();
 
     while (*p) {
         // skip space
@@ -34,11 +74,10 @@ Vector *tokenize(char *p)
         }
 
         // キーワード解析
-        static const char *ret = "return";
-        if (strncmp(p, ret, strlen(ret)) == 0) {
-            vec_push_token(tk, TK_RETURN, 0, p);
-            p += strlen(ret);
-            continue;
+        if (isalpha(*p) || *p == '_') {
+            if (keyword(tk, keywords, &p)) {
+                continue;
+            }
         }
 
         // variables

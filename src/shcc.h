@@ -73,7 +73,9 @@ void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input);
 
 Map *new_map(void);
 void map_put(Map *map, char *key, void *val);
-void *map_get(Map *map, char *key);
+void map_puti(Map *map, char *key, int val);
+void *map_get(const Map *map, char *key);
+int map_geti(const Map *map, char *key);
 
 struct Vector *tokenize(char *p);
 
