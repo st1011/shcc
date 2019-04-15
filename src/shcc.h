@@ -47,7 +47,7 @@ typedef struct Node {
     struct Node *lhs;
     struct Node *rhs;
     int val;                // ND_NUMの場合の数値
-    char name;              // ND_IDENTの場合の名前
+    const char *name;       // ND_IDENTの場合の名前
 } Node;
 
 // ノード用ベクター
@@ -72,16 +72,17 @@ void vec_push(Vector *vec, void *elem);
 void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input);
 
 Map *new_map(void);
-void map_put(Map *map, char *key, void *val);
-void map_puti(Map *map, char *key, int val);
-void *map_get(const Map *map, char *key);
-int map_geti(const Map *map, char *key);
+void map_put(Map *map, const char *key, void *val);
+void map_puti(Map *map, const char *key, int val);
+void *map_get(const Map *map, const char *key);
+int map_geti(const Map *map, const char *key);
 
 struct Vector *tokenize(char *p);
 
 void program(void);
 
 void gen_asm(Node *node);
+void gen_asm_prologue(void);
 void gen_asm_epilog(void);
 void exit_with_asm(void);
 

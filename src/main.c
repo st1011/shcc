@@ -28,16 +28,8 @@ int main(int argc, char **argv)
     // パース
     program();
 
-    // アセンブリ 前半出力
-    printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
-
-    // アセンブリ プロローグ
-    printf("  push rbp\n");     // 呼び出し元のベースポインタを保存
-    printf("  mov rbp, rsp\n");
-    // 現在の言語仕様に存在する変数領域を一括で待避する
-    printf("  sub rsp, %d\n", ('z' - 'a' + 1) * 8);
+    // プロローグ
+    gen_asm_prologue();
 
     // 先頭の式から順にコード生成
     for (int i = 0; code->data[i]; i++) {

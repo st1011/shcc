@@ -20,22 +20,22 @@ static bool is_oneop(char ch)
         || ch == TK_STMT;
 }
 
-// 特殊キーワードのマップを生成・取得
-static Map *get_keywords(void)
+// 予約後のマップを生成・取得
+static Map *get_reserved_words(void)
 {
-    Map *keywords = new_map();
+    Map *reserved_words = new_map();
 
-    map_puti(keywords, "return", TK_RETURN);
+    map_puti(reserved_words, "return", TK_RETURN);
 
-    return keywords;
+    return reserved_words;
 }
 
-// キーワード文字列を抜き出す
-// キーワードが見つからなければfalse returnで何もしない
-static bool keyword(Vector *tk, const Map *keywords, char **pp)
+// 識別子をトークナイズ
+// 変数も予約語もここで処理する
+static char *ident(Vector *tk, const Map *rwords, char *p)
 {
+    // キーワード文字列を抜き出す
     int len = 1;
-    char *p = *pp;
     while (isalpha(p[len]) || isdigit(p[len]) || p[len] == '_') {
         len++;
     }
@@ -43,19 +43,16 @@ static bool keyword(Vector *tk, const Map *keywords, char **pp)
     strncpy(name, p, len);
     name[len] = '\0';
 
-    int ty = map_geti(keywords, name);
-
-    // キーワードではなかった
+    // 抜き出した文字列の識別子を調べる
+    int ty = map_geti(rwords, name);
     if (ty == 0) {
-        return false;
+        // 予約後ではないので、変数
+        ty = TK_IDENT;
     }
 
     vec_push_token(tk, ty, 0, name);
-    p += len;
 
-    *pp = p;
-
-    return true;
+    return p + len;
 }
 
 
@@ -64,7 +61,7 @@ static bool keyword(Vector *tk, const Map *keywords, char **pp)
 Vector *tokenize(char *p)
 {
     Vector *tk = new_vector();
-    Map *keywords = get_keywords();
+    Map *rwords = get_reserved_words();
 
     while (*p) {
         // skip space
@@ -73,17 +70,10 @@ Vector *tokenize(char *p)
             continue;
         }
 
-        // キーワード解析
+        // 識別子
+        // 変数も予約後もここで
         if (isalpha(*p) || *p == '_') {
-            if (keyword(tk, keywords, &p)) {
-                continue;
-            }
-        }
-
-        // variables
-        if (*p >= 'a' && *p <= 'z') {
-            vec_push_token(tk, TK_IDENT, 0, p);
-            p++;
+            p = ident(tk, rwords, p);
             continue;
         }
 

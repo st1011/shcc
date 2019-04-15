@@ -18,7 +18,7 @@ static Node *mul(void);
 static Node *add(void);
 
 // ノード作成のbody
-static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, char name)
+static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const char *name)
 {
     Node *node = calloc(1, sizeof(Node));
     node->ty = ty;
@@ -43,7 +43,7 @@ static Node *new_node_num(int val)
 }
 
 // 識別子ノード
-static Node *new_node_ident(char name)
+static Node *new_node_ident(const char *name)
 {
     return new_node_body(ND_IDENT, 0, 0, 0, name);
 }
@@ -97,7 +97,7 @@ static Node *term(void)
         return node;
     }
     if (tk->ty == TK_IDENT) {
-        Node *node = new_node_ident(tk->input[0]);
+        Node *node = new_node_ident(tk->input);
         pos++;
 
         return node;
