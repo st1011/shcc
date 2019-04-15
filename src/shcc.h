@@ -11,12 +11,14 @@ typedef enum {
     TK_DIV = '/',
     TK_PROPEN = '(',
     TK_PRCLOSE = ')',
-    TK_EQ = '=',
+    TK_ASSIGN = '=',
     TK_STMT = ';',
 
     TK_NUM = 0x100,     // 整数
     TK_IDENT,           // 識別子
     TK_RETURN,          // return
+    TK_EQ,              // ==
+    TK_NEQ,             // !=
     TK_EOF,             // 終端
 } TokenType_t;
 
@@ -26,12 +28,14 @@ typedef enum {
     ND_MINUS = '-',
     ND_MUL = '*',
     ND_DIV = '/',
-    ND_EQ = '=',
+    ND_ASSIGN = '=',
     ND_STMT = ';',
 
     ND_NUM = 0x100, // 整数のノードの型
     ND_IDENT,       // 識別子のノードの型
     ND_RETURN,      // returnのノードの型
+    ND_EQ,              // ==
+    ND_NEQ,             // !=
 } NodeType_t;
 
 // トークンの型
@@ -77,7 +81,8 @@ void map_puti(Map *map, const char *key, int val);
 void *map_get(const Map *map, const char *key);
 int map_geti(const Map *map, const char *key);
 
-struct Vector *tokenize(char *p);
+Vector *tokenize(char *p);
+void print_tokens(Vector *vec);
 
 void program(void);
 

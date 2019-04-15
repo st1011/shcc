@@ -94,7 +94,7 @@ static void gen_asm_body(Node *node)
         return;
     }
 
-    if (node->ty == ND_EQ) {
+    if (node->ty == ND_ASSIGN) {
         // 代入式なら、必ず左辺は変数
         gen_asm_lval(node->lhs);
         gen_asm_body(node->rhs);
@@ -128,6 +128,19 @@ static void gen_asm_body(Node *node)
             // div命令は rax =  ((rdx << 64) | rax) / rdi
             printf("  mov rdx, 0\n");
             printf("  div rdi\n");
+            break;
+        }
+
+        case ND_EQ: {
+            printf("  cmp rdi, rax\n");
+            printf("  sete al\n");
+            printf("  movzb rax, al\n");
+            break;
+        }
+        case ND_NEQ: {
+            printf("  cmp rdi, rax\n");
+            printf("  setne al\n");
+            printf("  movzb rax, al\n");
             break;
         }
 

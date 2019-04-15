@@ -9,6 +9,35 @@
 
 Vector *tokens = 0;
 
+static struct {
+    TokenType_t ty;
+    const char *name;
+} symbols[ ] = {
+    {TK_EQ, "=="}, {TK_NEQ, "!="},
+};
+
+void print_tokens(Vector *vec)
+{
+    for (int i = 0; i < vec->len; i++) {
+        Token *tk = vec->data[i];
+
+        printf("ty: ");
+        switch (tk->ty) {
+            case TK_NUM:            printf("NUM");      break;
+            case TK_IDENT:          printf("ID");       break;
+            case TK_RETURN:         printf("RET");      break;
+            case TK_EQ:             printf("==");       break;
+            case TK_NEQ:            printf("!=");       break;
+            case TK_EOF:            printf("EOF");      break;
+            default: {
+                printf("%c", tk->ty);
+                break;
+            }
+        }
+        printf("\n");
+    }
+}
+
 // 一文字式か？
 static bool is_oneop(char ch)
 {
@@ -16,7 +45,7 @@ static bool is_oneop(char ch)
     return ch == TK_PLUS || ch == TK_MINUS
         || ch == TK_MUL || ch == TK_DIV
         || ch == TK_PROPEN || ch == TK_PRCLOSE
-        || ch == TK_EQ
+        || ch == TK_ASSIGN
         || ch == TK_STMT;
 }
 
@@ -55,6 +84,23 @@ static char *ident(Vector *tk, const Map *rwords, char *p)
     return p + len;
 }
 
+// 複数文字のoperand
+static int multi_symbols(Vector *tk, char *p)
+{
+    int len = 0;
+
+    for (int i = 0; i < NUMOF(symbols); i++) {
+        const char *name = symbols[i].name;
+
+        if (strncmp(p, name, strlen(name)) == 0) {
+            vec_push_token(tk, symbols[i].ty, 0, p);
+            len = strlen(name);
+            break;
+        }
+    }
+
+    return len;
+}
 
 // トークナイズの実行
 // 出力はしない
@@ -67,6 +113,13 @@ Vector *tokenize(char *p)
         // skip space
         if (isspace(*p)) {
             p++;
+            continue;
+        }
+
+        // 複数文字のoperand
+        int next = multi_symbols(tk, p);
+        if (next != 0) {
+            p += next;
             continue;
         }
 

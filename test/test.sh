@@ -22,6 +22,7 @@ try() {
 try 0 '0;'
 try 42 '42;'
 
+try 42 '40+2;'
 try 21 '5+20-4;'
 try 0 '0+0-0;'
 
@@ -53,7 +54,12 @@ try 10 'zyx = 10; return zyx;'
 try 10 'foobar = 10; return foobar;'
 try 10 'a123 = 10; return a123;'
 try 10 'a1=2; a2=3; a3=4; a4=5; a5=6; a6=7; a7=8; a8=9; a9=10; a10=11; a11=12; a12=13; a13=14; a14=15; a15=16; a16=17; a17=18; a18=19; a19=20; a20=21; a21=22; a22=23; a23=24; a24=25; a25=26; a26=27; a27=28; a28=29; a29=30; a30=31; return a9;'
-
+try 0 'return 1==2;'
+try 1 'return 1==1;'
+try 0 'return 10!=10;'
+try 1 'return 10!=20;'
+try 1 'foo=10==10; return foo;'
+try 0 'foo=10!=10; return foo;'
 
 echo OK
 

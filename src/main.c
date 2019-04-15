@@ -24,6 +24,7 @@ int main(int argc, char **argv)
 
     // トークナイズ
     tokens = tokenize(argv[1]);
+    // print_tokens(tokens);
 
     // パース
     program();

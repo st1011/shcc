@@ -16,6 +16,7 @@ int pos = 0;
 static Node *term(void);
 static Node *mul(void);
 static Node *add(void);
+static Node *equal(void);
 
 // ノード作成のbody
 static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const char *name)
@@ -80,7 +81,7 @@ static int consume(int ty)
 static Node *term(void)
 {
     if (consume(TK_PROPEN)) {
-        Node *node = add();
+        Node *node = equal();
 
         if (!consume(TK_PRCLOSE)) {
             error("対応する閉じ括弧がありません");
@@ -138,7 +139,25 @@ static Node *add(void)
         else if (consume(TK_MINUS)) {
             node = new_node(ND_MINUS, node, mul());
         }
-        else {
+        else {       
+            return node;
+        }
+    }
+}
+
+// 比較演算子
+static Node *equal(void)
+{
+    Node *node = add();
+
+    for (;;) {
+        if (consume(TK_EQ)) {
+            node = new_node(ND_EQ, node, add());
+        }
+        else if (consume(TK_NEQ)) {
+            node = new_node(ND_NEQ, node, add());
+        }
+        else {    
             return node;
         }
     }
@@ -147,10 +166,10 @@ static Node *add(void)
 // 一つの式ノード
 static Node *assign(void)
 {
-    Node *node = add();
+    Node *node = equal();
 
-    while (consume(TK_EQ)) {
-        node = new_node(ND_EQ, node, assign());
+    while (consume(TK_ASSIGN)) {
+        node = new_node(ND_ASSIGN, node, assign());
     }
 
     return node;
@@ -192,3 +211,23 @@ void program(void)
 
     vec_push(code, NULL);
 }
+
+// [種類] [演算子] [結合規則]
+// 上ほど優先順位高い
+
+// 関数, 添字, 構造体メンバ参照,後置増分/減分	() [] . -> ++ --	左→右
+// 前置増分/減分, 単項式※	++ -- ! ~ + - * & sizeof	左←右
+// キャスト	(型名)
+// 乗除余	* / %	左→右
+// 加減	+ -
+// シフト	<< >>
+// 比較	< <= > >=
+// 等値	== !=
+// ビットAND	&
+// ビットXOR	^
+// ビットOR	|
+// 論理AND	&&
+// 論理OR	||
+// 条件	?:	左←右
+// 代入	= += -= *= /= %= &= ^= |= <<= >>=
+// コンマ	,	左→右
