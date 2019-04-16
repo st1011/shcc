@@ -10,6 +10,8 @@
 static Map *vars = 0;
 static int stack_offset = 0;
 
+static const int stack_unit = 16;
+
 // プロローグアセンブリ出力
 void gen_asm_prologue(void)
 {
@@ -61,8 +63,8 @@ static void gen_asm_lval(Node *node)
         offset = stack_offset;
         map_puti(vars, node->name, stack_offset);
 
-        printf("  sub rsp, 8\t\t# stack push\n");   // スタック待避
-        stack_offset += 8;
+        printf("  sub rsp, %d\t\t# stack push\n", stack_unit);   // スタック待避
+        stack_offset += stack_unit;
     }
 
     printf("  mov rax, rbp\n");
@@ -91,6 +93,12 @@ static void gen_asm_body(Node *node)
         printf("  pop rax\n");
         printf("  mov rax, [rax]\n");
         printf("  push rax\n");
+        return;
+    }
+    if (node->ty == ND_CALL) {
+        // 関数呼び出し
+        // RSPを16B alignは、スタック自体を16B単位で動かしているのでやらない
+        printf("  call %s\n", node->name);
         return;
     }
 

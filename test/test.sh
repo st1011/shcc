@@ -7,7 +7,7 @@ try() {
 	input="$2"
 
 	../bin/shcc "$input" > out.s
-	gcc -o out out.s
+	gcc -o out out.s exfunc.o
 	./out
 	actual="$?"
 
@@ -60,6 +60,8 @@ try 0 'return 10!=10;'
 try 1 'return 10!=20;'
 try 1 'foo=10==10; return foo;'
 try 0 'foo=10!=10; return foo;'
+
+try 42 'exfunc1();return 42;'
 
 echo OK
 

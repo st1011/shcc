@@ -33,6 +33,7 @@ typedef enum {
 
     ND_NUM = 0x100, // 整数のノードの型
     ND_IDENT,       // 識別子のノードの型
+    ND_CALL,        // 関数のノードの型
     ND_RETURN,      // returnのノードの型
     ND_EQ,              // ==
     ND_NEQ,             // !=

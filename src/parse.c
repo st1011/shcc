@@ -49,6 +49,12 @@ static Node *new_node_ident(const char *name)
     return new_node_body(ND_IDENT, 0, 0, 0, name);
 }
 
+// 関数ノード
+static Node *new_node_funccall(const char *name)
+{
+    return new_node_body(ND_CALL, 0, 0, 0, name);
+}
+
 // returnノード
 static Node *new_node_return(Node *lhs)
 {
@@ -97,7 +103,16 @@ static Node *term(void)
         return node;
     }
     if (consume(TK_IDENT)) {
-        Node *node = new_node_ident(tk->input);
+        Node *node = NULL;
+
+        if (consume(TK_PROPEN) && consume(TK_PRCLOSE)) {
+            // 関数呼び出し
+            node = new_node_funccall(tk->input);
+        }
+        else {
+            // 変数
+            node = new_node_ident(tk->input);
+        }
 
         return node;
     }
