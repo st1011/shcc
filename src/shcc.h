@@ -39,6 +39,19 @@ typedef enum {
     ND_NEQ,             // !=
 } NodeType_t;
 
+// ノード用ベクター
+typedef struct Vector {
+    void **data;
+    int capacity;
+    int len;
+} Vector;
+
+// 連想配列用マップ
+typedef struct {
+    Vector *keys;
+    Vector *vals;
+} Map;
+
 // トークンの型
 typedef struct {
     TokenType_t ty;         // 型
@@ -53,21 +66,8 @@ typedef struct Node {
     struct Node *rhs;
     int val;                // ND_NUMの場合の数値
     const char *name;       // ND_IDENTの場合の名前
+    Vector *args;            // ND_CALLの引数
 } Node;
-
-// ノード用ベクター
-typedef struct Vector {
-    void **data;
-    int capacity;
-    int len;
-} Vector;
-
-// 連想配列用マップ
-typedef struct {
-    Vector *keys;
-    Vector *vals;
-} Map;
-
 
 extern Vector *tokens;
 extern Vector *code;

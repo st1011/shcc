@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include "shcc.h"
 
@@ -11,6 +12,11 @@ static Map *vars = 0;
 static int stack_offset = 0;
 
 static const int stack_unit = 16;
+
+// 引数に使うレジスタ
+static const char *arg_regs[ ] = {
+    "rdi", "rsi", "rdx", "rcx", "r8", "r9"
+};
 
 // プロローグアセンブリ出力
 void gen_asm_prologue(void)
@@ -106,6 +112,15 @@ static void gen_asm_body(Node *node)
             printf("  mov rdi, %d\n", stack_unit);
             printf("  div rdi\n");
             printf("  sub rsp, rdx\n");
+        }
+        // 引数をレジスタに格納する
+        // 今はとりあえず上限までレジスタ格納しておく
+        for (int i = 0; i < node->args->len; i++) {
+            // 引数の個数多すぎない？
+            assert(i < NUMOF(arg_regs));
+
+            gen_asm_body(node->args->data[i]);
+            printf("  pop %s\n", arg_regs[i]);
         }
         printf("  call %s\n", node->name);
         return;

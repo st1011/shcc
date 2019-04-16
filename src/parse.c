@@ -17,6 +17,7 @@ static Node *term(void);
 static Node *mul(void);
 static Node *add(void);
 static Node *equal(void);
+static Node *assign(void);
 
 // ノード作成のbody
 static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const char *name)
@@ -27,6 +28,7 @@ static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const c
     node->rhs = rhs;
     node->val = val;
     node->name = name;
+    node->args = new_vector();
 
     return node;
 }
@@ -105,9 +107,14 @@ static Node *term(void)
     if (consume(TK_IDENT)) {
         Node *node = NULL;
 
-        if (consume(TK_PROPEN) && consume(TK_PRCLOSE)) {
+        if (consume(TK_PROPEN)) {
             // 関数呼び出し
             node = new_node_funccall(tk->input);
+
+            // 引数
+            while (!consume(TK_PRCLOSE)) {
+                vec_push(node->args, assign());
+            }
         }
         else {
             // 変数

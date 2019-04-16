@@ -62,6 +62,8 @@ try 1 'foo=10==10; return foo;'
 try 0 'foo=10!=10; return foo;'
 
 try 42 'exfunc1();return 42;'
+try 21 'exfunc2(42);return 21;'
+try 42 'exfunc3(42 21);return 42;'
 
 echo OK
 
