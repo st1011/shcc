@@ -91,15 +91,13 @@ static Node *term(void)
     }
 
     Token *tk = tokens->data[pos];
-    if (tk->ty == TK_NUM) {
+    if (consume(TK_NUM)) {
         Node *node = new_node_num(tk->val);
-        pos++;
 
         return node;
     }
-    if (tk->ty == TK_IDENT) {
+    if (consume(TK_IDENT)) {
         Node *node = new_node_ident(tk->input);
-        pos++;
 
         return node;
     }
