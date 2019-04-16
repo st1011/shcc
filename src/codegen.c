@@ -97,7 +97,16 @@ static void gen_asm_body(Node *node)
     }
     if (node->ty == ND_CALL) {
         // 関数呼び出し
-        // RSPを16B alignは、スタック自体を16B単位で動かしているのでやらない
+        
+        // 16B align
+        {
+            // div命令は rax =  ((rdx << 64) | rax) / rdi
+            printf("  mov rdx, 0\n");
+            printf("  mov rax, rsp\n");
+            printf("  mov rdi, %d\n", stack_unit);
+            printf("  div rdi\n");
+            printf("  sub rsp, rdx\n");
+        }
         printf("  call %s\n", node->name);
         return;
     }
