@@ -61,11 +61,11 @@ static void gen_asm_func_head(Node *func)
     for (int i = 0; i < func->args->len; i++) {
         map_puti(vars, func->args->data[i], stack_offset);
 
-        stack_offset += stack_unit;
-
         printf("  mov rax, rbp\n");
         printf("  sub rax, %d\n", stack_offset);
-        printf("  mov [rax] %s\n", arg_regs[i]);
+        printf("  mov [rax], %s\n", arg_regs[i]);
+        
+        stack_offset += stack_unit;
     }
 
     if (stack_offset > 0) {

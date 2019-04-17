@@ -39,3 +39,9 @@ int exfunc5(int a, int b)
 
     return a + b;
 }
+
+// int型の引数を表示する
+void print_int(int a)
+{
+    printf("[%d]", a);
+}

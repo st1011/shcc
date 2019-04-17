@@ -106,6 +106,10 @@ try 20 'foo(){a=10;} main(){foo(); return 20;}'
 try 20 'foo(){a=10;} main(){a=20; foo();return a;}'
 try 10 'foo(){a=10; return a;} main(){a=20; a=foo();return a;}'
 
+try 40 'foo(a){print_int(a); return a*2;} main(){return foo(20);}'
+try 40 'foo(a){return a*2;} main(){a=20; b=foo(a);return b;}'
+try 85 'foo(a b c){return a+b+c;} main(){a=20; b=40; c=10; d=foo(a*2 b c/2);return d;}'
+
 
 echo OK
 
