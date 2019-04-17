@@ -74,5 +74,12 @@ try 42 'a = exfunc4();return a;'
 try 42 'a = exfunc4();b=exfunc4();return a;'
 try 42 'a = exfunc4();b=exfunc4();return b;'
 
+try 42 'return exfunc5(40 2);'
+try 21 'a = 11;b = 10; return exfunc5(a b);'
+try 42 'return exfunc5(20+20 1+1);'
+try 42 'a = exfunc5(20 1);b = 21; return a + b;'
+try 42 'a = exfunc5(20 1);b = exfunc5(20 1); c = exfunc5(a b); return c;'
+try 42 'a = exfunc5(20 1);b = exfunc5(20 1); return c = exfunc5(a b);'
+
 echo OK
 
