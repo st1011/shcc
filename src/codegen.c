@@ -176,16 +176,47 @@ static void gen_asm_body(Node *node)
             printf("  div rdi\n");
             break;
         }
+        case ND_MOD: {
+            // div命令は rax =  ((rdx << 64) | rax) / rdi
+            printf("  mov rdx, 0\n");
+            printf("  div rdi\n");
+            printf("  mov rax, rdx\n");
+            break;
+        }
 
         case ND_EQ: {
-            printf("  cmp rdi, rax\n");
+            printf("  cmp rax, rdi\n");
             printf("  sete al\n");
             printf("  movzb rax, al\n");
             break;
         }
         case ND_NEQ: {
-            printf("  cmp rdi, rax\n");
+            printf("  cmp rax, rdi\n");
             printf("  setne al\n");
+            printf("  movzb rax, al\n");
+            break;
+        }
+        case ND_LESS: {
+            printf("  cmp rax, rdi\n");
+            printf("  setl al\n");
+            printf("  movzb rax, al\n");
+            break;
+        }
+        case ND_LESS_EQ: {
+            printf("  cmp rax, rdi\n");
+            printf("  setle al\n");
+            printf("  movzb rax, al\n");
+            break;
+        }
+        case ND_GREATER: {
+            printf("  cmp rax, rdi\n");
+            printf("  setg al\n");
+            printf("  movzb rax, al\n");
+            break;
+        }
+        case ND_GREATER_EQ: {
+            printf("  cmp rax, rdi\n");
+            printf("  setge al\n");
             printf("  movzb rax, al\n");
             break;
         }

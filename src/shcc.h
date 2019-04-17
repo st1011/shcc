@@ -9,9 +9,12 @@ typedef enum {
     TK_MINUS = '-',
     TK_MUL = '*',
     TK_DIV = '/',
+    TK_MOD = '%',
     TK_PROPEN = '(',
     TK_PRCLOSE = ')',
     TK_ASSIGN = '=',
+    TK_LESS = '<',
+    TK_GREATER = '>',
     TK_STMT = ';',
 
     TK_NUM = 0x100,     // 整数
@@ -19,6 +22,8 @@ typedef enum {
     TK_RETURN,          // return
     TK_EQ,              // ==
     TK_NEQ,             // !=
+    TK_LESS_EQ,         // <=
+    TK_GREATER_EQ,      // >=
     TK_EOF,             // 終端
 } TokenType_t;
 
@@ -28,15 +33,20 @@ typedef enum {
     ND_MINUS = '-',
     ND_MUL = '*',
     ND_DIV = '/',
+    ND_MOD = '%',
     ND_ASSIGN = '=',
+    ND_LESS = '<',
+    ND_GREATER = '>',
     ND_STMT = ';',
 
-    ND_NUM = 0x100, // 整数のノードの型
-    ND_IDENT,       // 識別子のノードの型
-    ND_CALL,        // 関数のノードの型
-    ND_RETURN,      // returnのノードの型
+    ND_NUM = 0x100,     // 整数のノードの型
+    ND_IDENT,           // 識別子のノードの型
+    ND_CALL,            // 関数のノードの型
+    ND_RETURN,          // returnのノードの型
     ND_EQ,              // ==
     ND_NEQ,             // !=
+    ND_LESS_EQ,         // <=
+    ND_GREATER_EQ,      // >=
 } NodeType_t;
 
 // ノード用ベクター

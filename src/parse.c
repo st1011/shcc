@@ -13,10 +13,7 @@ Vector *code = 0;
 //次のトークン位置
 int pos = 0;
 
-static Node *term(void);
-static Node *mul(void);
-static Node *add(void);
-static Node *equal(void);
+static Node *expr(void);
 static Node *assign(void);
 
 // ノード作成のbody
@@ -89,7 +86,7 @@ static int consume(int ty)
 static Node *term(void)
 {
     if (consume(TK_PROPEN)) {
-        Node *node = equal();
+        Node *node = expr();
 
         if (!consume(TK_PRCLOSE)) {
             error("対応する閉じ括弧がありません");
@@ -129,17 +126,37 @@ static Node *term(void)
     return 0;
 }
 
-// かけ算、足し算ノード
-static Node *mul(void)
+// 前置増分/減分, 単項式
+// ++ -- ! ~ +-（符号） * & sizeof()
+static Node *monomial(void)
 {
     Node *node = term();
 
+    return node;
+}
+
+// キャスト演算子
+static Node *cast(void)
+{
+    Node *node = monomial();
+
+    return node;
+}
+
+// 乗除余演算子
+static Node *mul(void)
+{
+    Node *node = cast();
+
     for (;;) {
         if (consume(TK_MUL)) {
-            node = new_node(ND_MUL, node, term());
+            node = new_node(ND_MUL, node, mul());
         }
         else if (consume(TK_DIV)) {
-            node = new_node(ND_DIV, node, term());
+            node = new_node(ND_DIV, node, mul());
+        }
+        else if (consume(TK_MOD)) {
+            node = new_node(ND_MOD, node, mul());
         }
         else {
             return node;
@@ -147,17 +164,17 @@ static Node *mul(void)
     }
 }
 
-// 先頭ノード 足し算、引き算
+// 加減演算子
 static Node *add(void)
 {
     Node *node = mul();
 
     for (;;) {
         if (consume(TK_PLUS)) {
-            node = new_node(ND_PLUS, node, mul());
+            node = new_node(ND_PLUS, node, add());
         }
         else if (consume(TK_MINUS)) {
-            node = new_node(ND_MINUS, node, mul());
+            node = new_node(ND_MINUS, node, add());
         }
         else {       
             return node;
@@ -165,17 +182,50 @@ static Node *add(void)
     }
 }
 
-// 比較演算子
-static Node *equal(void)
+// シフト演算子
+static Node *shift(void)
 {
     Node *node = add();
 
+    return node;
+}
+
+// 比較演算子
+static Node *comparison(void)
+{
+    Node *node = shift();
+
+    for (;;) {
+        if (consume(TK_LESS)) {
+            node = new_node(ND_LESS, node, comparison());
+        }
+        else if (consume(TK_GREATER)) {
+            node = new_node(ND_GREATER, node, comparison());
+        }
+        else if (consume(TK_LESS_EQ)) {
+            node = new_node(ND_LESS_EQ, node, comparison());
+        }
+        else if (consume(TK_GREATER_EQ)) {
+            node = new_node(ND_GREATER_EQ, node, comparison());
+        }
+        else {    
+            return node;
+        }
+    }
+
+}
+
+// 等価演算子
+static Node *equality(void)
+{
+    Node *node = comparison();
+
     for (;;) {
         if (consume(TK_EQ)) {
-            node = new_node(ND_EQ, node, add());
+            node = new_node(ND_EQ, node, comparison());
         }
         else if (consume(TK_NEQ)) {
-            node = new_node(ND_NEQ, node, add());
+            node = new_node(ND_NEQ, node, comparison());
         }
         else {    
             return node;
@@ -183,14 +233,73 @@ static Node *equal(void)
     }
 }
 
-// 一つの式ノード
+// ビットAND
+static Node *bit_and(void)
+{
+    Node *node = equality();
+
+    return node;
+}
+
+// ビットXOR
+static Node *bit_xor(void)
+{
+    Node *node = bit_and();
+
+    return node;
+}
+
+// ビットOR
+static Node *bit_or(void)
+{
+    Node *node = bit_xor();
+
+    return node;
+}
+
+// 論理AND
+static Node *logical_and(void)
+{
+    Node *node = bit_or();
+
+    return node;
+}
+
+// 論理OR
+static Node *logical_or(void)
+{
+    Node *node = logical_and();
+
+    return node;
+}
+
+// 条件演算子
+static Node *conditional(void)
+{
+    Node *node = logical_or();
+
+    return node;
+}
+
+// 代入演算子
 static Node *assign(void)
 {
-    Node *node = equal();
+    Node *node = conditional();
 
-    while (consume(TK_ASSIGN)) {
-        node = new_node(ND_ASSIGN, node, assign());
+    for (;;) {
+        if (consume(TK_ASSIGN)) {
+            node = new_node(ND_ASSIGN, node, assign());
+        }
+        else {    
+            return node;
+        }
     }
+}
+
+// 一つの式
+static Node *expr(void)
+{
+    Node *node = assign();
 
     return node;
 }
@@ -201,10 +310,10 @@ static Node *stmt(void)
     Node *node;
     
     if (consume(TK_RETURN)) {
-        node = new_node_return(assign());
+        node = new_node_return(expr());
     }
     else {
-        node = assign();
+        node = expr();
     }
 
     if (!consume(TK_STMT)) {

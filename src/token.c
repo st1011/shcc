@@ -14,6 +14,7 @@ static struct {
     const char *name;
 } symbols[ ] = {
     {TK_EQ, "=="}, {TK_NEQ, "!="},
+    {TK_LESS_EQ, "<="}, {TK_GREATER_EQ, ">="},
 };
 
 // トークン一覧の出力
@@ -29,6 +30,8 @@ void dump_token_list(Vector *token_list)
             case TK_RETURN:         printf("RET");      break;
             case TK_EQ:             printf("==");       break;
             case TK_NEQ:            printf("!=");       break;
+            case TK_LESS_EQ:        printf("<=");       break;
+            case TK_GREATER_EQ:     printf(">=");       break;
             case TK_EOF:            printf("EOF");      break;
             default: {
                 printf("%c", tk->ty);
@@ -45,8 +48,10 @@ static bool is_oneop(char ch)
     // 数値以外で1文字式
     return ch == TK_PLUS || ch == TK_MINUS
         || ch == TK_MUL || ch == TK_DIV
+        || ch == TK_MOD
         || ch == TK_PROPEN || ch == TK_PRCLOSE
         || ch == TK_ASSIGN
+        || ch == TK_LESS || ch == TK_GREATER
         || ch == TK_STMT;
 }
 
@@ -124,17 +129,17 @@ Vector *tokenize(char *p)
             continue;
         }
 
-        // 識別子
-        // 変数も予約後もここで
-        if (isalpha(*p) || *p == '_') {
-            p = ident(tk, rwords, p);
-            continue;
-        }
-
         // operand
         if (is_oneop(*p)) {
             vec_push_token(tk, *p, 0, p);
             p++;
+            continue;
+        }
+
+        // 識別子
+        // 変数も予約後もここで
+        if (isalpha(*p) || *p == '_') {
+            p = ident(tk, rwords, p);
             continue;
         }
 

@@ -81,5 +81,23 @@ try 42 'a = exfunc5(20 1);b = 21; return a + b;'
 try 42 'a = exfunc5(20 1);b = exfunc5(20 1); c = exfunc5(a b); return c;'
 try 42 'a = exfunc5(20 1);b = exfunc5(20 1); return c = exfunc5(a b);'
 
+try 0 'return 20 < 10;'
+try 1 'return 20 < 30;'
+try 0 'return 20 <= 10;'
+try 1 'return 20 <= 30;'
+try 1 'return 20 <= 20;'
+
+try 1 'return 20 > 10;'
+try 0 'return 20 > 30;'
+try 1 'return 20 >= 10;'
+try 0 'return 20 >= 30;'
+try 1 'return 20 >= 20;'
+
+try 3 'return 7 % 4;'
+try 3 'return (3+4) % 4;'
+try 0 'return 10 % 10;'
+
+
+
 echo OK
 
