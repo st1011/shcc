@@ -52,6 +52,7 @@ static bool is_oneop(char ch)
         || ch == TK_PROPEN || ch == TK_PRCLOSE
         || ch == TK_ASSIGN
         || ch == TK_LESS || ch == TK_GREATER
+        || ch == ND_BRACE_OPEN || ch == ND_BRACE_CLOSE
         || ch == TK_STMT;
 }
 

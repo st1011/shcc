@@ -26,6 +26,7 @@ static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const c
     node->val = val;
     node->name = name;
     node->args = new_vector();
+    node->block_stmts = new_vector();
 
     return node;
 }
@@ -58,6 +59,12 @@ static Node *new_node_funccall(const char *name)
 static Node *new_node_return(Node *lhs)
 {
     return new_node(ND_RETURN, lhs, 0);
+}
+
+// Block ノード
+static Node *new_node_block(void)
+{
+    return new_node(ND_BLOCK, 0, 0);
 }
 
 // トークン解析失敗エラー
@@ -323,6 +330,27 @@ static Node *stmt(void)
     return node;
 }
 
+// 複文 / ブロック（{}）
+static Node *multi_stmt(void)
+{
+    Node *node = new_node_block();
+
+    if (!consume(TK_BRACE_OPEN)) {
+        error("'{'で始まらないトークンです");   
+    }
+
+    for (;;) {
+        if (consume(TK_BRACE_CLOSE)) {
+            vec_push(node->block_stmts, NULL);
+            
+            return node;
+        }
+        else {
+            vec_push(node->block_stmts, stmt());
+        }
+    }
+}
+
 // プログラム全体のノード作成
 void program(void)
 {
@@ -335,7 +363,7 @@ void program(void)
             break;
         }
 
-        vec_push(code, stmt());
+        vec_push(code, multi_stmt());
     }
 
     vec_push(code, NULL);

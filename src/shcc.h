@@ -15,6 +15,8 @@ typedef enum {
     TK_ASSIGN = '=',
     TK_LESS = '<',
     TK_GREATER = '>',
+    TK_BRACE_OPEN = '{',
+    TK_BRACE_CLOSE = '}',
     TK_STMT = ';',
 
     TK_NUM = 0x100,     // 整数
@@ -37,16 +39,20 @@ typedef enum {
     ND_ASSIGN = '=',
     ND_LESS = '<',
     ND_GREATER = '>',
+    ND_BRACE_OPEN = '{',
+    ND_BRACE_CLOSE = '}',
     ND_STMT = ';',
 
     ND_NUM = 0x100,     // 整数のノードの型
     ND_IDENT,           // 識別子のノードの型
     ND_CALL,            // 関数のノードの型
+    ND_BLOCK,           // 複文のノードの型
     ND_RETURN,          // returnのノードの型
     ND_EQ,              // ==
     ND_NEQ,             // !=
     ND_LESS_EQ,         // <=
     ND_GREATER_EQ,      // >=
+
 } NodeType_t;
 
 // ノード用ベクター
@@ -76,7 +82,8 @@ typedef struct Node {
     struct Node *rhs;
     int val;                // ND_NUMの場合の数値
     const char *name;       // ND_IDENTの場合の名前
-    Vector *args;            // ND_CALLの引数
+    Vector *args;           // ND_CALLの引数
+    Vector *block_stmts;    // ND_BLOCKを構成する式群
 } Node;
 
 extern Vector *tokens;
@@ -97,7 +104,7 @@ void dump_token_list(Vector *token_list);
 
 void program(void);
 
-void gen_asm(Node *node);
+void gen_asm(Vector *code);
 void gen_asm_prologue(void);
 void gen_asm_epilog(void);
 void exit_with_asm(void);

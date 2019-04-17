@@ -222,7 +222,7 @@ static void gen_asm_body(Node *node)
         }
 
         default: {
-            exit(1);
+            error("未対応のノード形式です");
             break;
         }
     }
@@ -230,16 +230,40 @@ static void gen_asm_body(Node *node)
     printf("  push rax\n");
 }
 
-// アセンブリ出力
-void gen_asm(Node *node)
+// block内のアセンブリ出力
+static void gen_asm_block(Vector *block_stmts)
 {
-    // ローカル変数マップ
-    if (vars == 0) {
-        vars = new_map();
-        stack_offset = 0;
+    void *vars_backup = vars;
+    
+    vars = new_map();
+    for (int j = 0; block_stmts->data[j]; j++) {
+        Node *node = (Node *)block_stmts->data[j];
+
+        if (node->ty == ND_BLOCK) {
+            gen_asm_block((Vector *)node->block_stmts);
+        }
+        else {
+            gen_asm_body(node);
+
+            // 式の評価結果としてpushされた値が一つあるので
+            // スタックがあふれないようにpopする
+            printf("  pop rax\n");
+        }
     }
 
-    gen_asm_body(node);
+    vars = vars_backup;
+}
+
+// アセンブリ出力
+void gen_asm(Vector *code)
+{
+    stack_offset = 0;
+
+    for (int i = 0; code->data[i]; i++) {
+        Node *block = code->data[i];
+
+        gen_asm_block(block->block_stmts);
+    }
 }
 
 // 適当なアセンブリを出力して終了する

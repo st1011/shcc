@@ -59,13 +59,7 @@ int main(int argc, char **argv)
     gen_asm_prologue();
 
     // 先頭の式から順にコード生成
-    for (int i = 0; code->data[i]; i++) {
-        gen_asm((Node *)code->data[i]);
-
-        // 式の評価結果としてpushされた値が一つあるので
-        // スタックがあふれないようにpopする
-        printf("  pop rax\n");
-    }
+    gen_asm(code);
 
     // エピローグ
     // 戻り値は最後の評価結果のrax値
