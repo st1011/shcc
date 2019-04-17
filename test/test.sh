@@ -99,6 +99,8 @@ try 0 '{return 10 % 10;}'
 
 try 30 '{a=10;{b=20;}c=30; return c;}'
 try 10 '{a=10;{a=20;}c=30; return a;}'
+try 20 '{a=10;{a=20; return a;}c=30; return a;}'
+try 30 '{a=10;{a=20; b=30; return b;}c=40; return a;}'
 
 
 echo OK
