@@ -45,7 +45,8 @@ typedef enum {
 
     ND_NUM = 0x100,     // 整数のノードの型
     ND_IDENT,           // 識別子のノードの型
-    ND_CALL,            // 関数のノードの型
+    ND_CALL,            // 関数呼び出しのノードの型
+    ND_FUNCTION,        // 関数定義のノードの型
     ND_BLOCK,           // 複文のノードの型
     ND_RETURN,          // returnのノードの型
     ND_EQ,              // ==
@@ -84,6 +85,7 @@ typedef struct Node {
     const char *name;       // ND_IDENTの場合の名前
     Vector *args;           // ND_CALLの引数
     Vector *block_stmts;    // ND_BLOCKを構成する式群
+    struct Node *func_block;       // ND_FUNCTIONの定義となるブロック
 } Node;
 
 extern Vector *tokens;

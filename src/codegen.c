@@ -23,12 +23,12 @@ void gen_asm_prologue(void)
 {
     // アセンブリ 前半出力
     printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
+    // printf(".global main\n");
+    // printf("main:\n");
 
-    // アセンブリ プロローグ
-    printf("  push rbp\n");     // 呼び出し元のベースポインタを保存
-    printf("  mov rbp, rsp\n");
+    // // アセンブリ プロローグ
+    // printf("  push rbp\n");     // 呼び出し元のベースポインタを保存
+    // printf("  mov rbp, rsp\n");
 
     printf("# body start\n");
 }
@@ -38,6 +38,48 @@ void gen_asm_epilog(void)
 {
     printf("# body end\n");
 
+    // printf("  mov rsp, rbp\n");
+    // printf("  pop rbp\n");
+    // printf("  ret\n");
+}
+
+// 関数プロローグ
+static void gen_asm_func_head(Node *func)
+{
+    printf(".global %s\n", func->name);
+    printf("%s:\n", func->name);
+
+    // 呼び出し元のベースポインタを保存
+    printf("  push rbp\n");
+    stack_offset += stack_unit;
+    printf("  mov rbp, rsp\n");
+
+    // 引数の個数チェック
+    assert(func->args->len <= NUMOF(arg_regs));
+
+    // 引数をスタックに展開
+    for (int i = 0; i < func->args->len; i++) {
+        map_puti(vars, func->args->data[i], stack_offset);
+
+        stack_offset += stack_unit;
+
+        printf("  mov rax, rbp\n");
+        printf("  sub rax, %d\n", stack_offset);
+        printf("  mov [rax] %s\n", arg_regs[i]);
+    }
+
+    if (stack_offset > 0) {
+        printf("  sub rsp, %d\t\t# stack evacuation\n", stack_offset);   // スタック待避
+    }
+}
+
+// 関数エピローグ
+static void gen_asm_func_tail(void)
+{
+    // 戻り値は、すでに格納されているハズ
+    // printf("  pop rax\n");
+
+    // 呼び出し元のベースポインタを復帰
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
@@ -86,7 +128,7 @@ static void gen_asm_body(Node *node)
     if (node->ty == ND_RETURN) {
         gen_asm_body(node->lhs);
         printf("  pop rax\n");
-        gen_asm_epilog();
+        gen_asm_func_tail();
         return;
     }
     if (node->ty == ND_NUM) {
@@ -111,7 +153,9 @@ static void gen_asm_body(Node *node)
         assert(node->args->len <= NUMOF(arg_regs));
         
         // 引数の数
-        printf("  mov rax, %d\n", node->args->len);
+        if (node->args->len > 0) {
+            printf("  mov rax, %d\n", node->args->len);
+        }
 
         // 一度すべての計算結果をスタックに積む
         for (int i = (int)node->args->len - 1; i >= 0; i--) {
@@ -233,9 +277,8 @@ static void gen_asm_body(Node *node)
 // block内のアセンブリ出力
 static void gen_asm_block(Vector *block_stmts)
 {
-    void *vars_backup = vars;
-    
-    vars = new_map();
+    int len = vars->keys->len;
+
     for (int j = 0; block_stmts->data[j]; j++) {
         Node *node = (Node *)block_stmts->data[j];
 
@@ -247,22 +290,29 @@ static void gen_asm_block(Vector *block_stmts)
 
             // 式の評価結果としてpushされた値が一つあるので
             // スタックがあふれないようにpopする
-            printf("  pop rax\n");
+            printf("  pop rax\t\t# remove before expr result\n");
         }
     }
 
-    vars = vars_backup;
+    // 無理矢理ブロック突入時の変数状態に戻す
+    vars->keys->len = len;
+    vars->vals->len = len;
 }
 
 // アセンブリ出力
 void gen_asm(Vector *code)
 {
-    stack_offset = 0;
-
+    // 1ループ1関数定義
     for (int i = 0; code->data[i]; i++) {
-        Node *block = code->data[i];
+        Node *funcdef = code->data[i];
 
-        gen_asm_block(block->block_stmts);
+        // 関数ごとにスタックや変数一覧はクリアされる
+        stack_offset = 0;
+        vars = new_map();
+
+        gen_asm_func_head(funcdef);
+        gen_asm_block(funcdef->func_block->block_stmts);
+        gen_asm_func_tail();
     }
 }
 

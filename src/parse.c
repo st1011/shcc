@@ -27,6 +27,7 @@ static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const c
     node->name = name;
     node->args = new_vector();
     node->block_stmts = new_vector();
+    node->func_block = 0;
 
     return node;
 }
@@ -65,6 +66,12 @@ static Node *new_node_return(Node *lhs)
 static Node *new_node_block(void)
 {
     return new_node(ND_BLOCK, 0, 0);
+}
+
+// Block ノード
+static Node *new_node_funcdef(const char *name)
+{
+    return new_node_body(ND_CALL, 0, 0, 0, name);
 }
 
 // トークン解析失敗エラー
@@ -355,6 +362,35 @@ static Node *multi_stmt(void)
     }
 }
 
+// globalレベルのノード
+static Node *globals(void)
+{
+    Token *tk = tokens->data[pos];
+
+    if (!consume(TK_IDENT)) {
+        error("top階層に関数が見つかりません");
+    }
+
+    Node *node = new_node_funcdef(tk->input);
+
+    if (!consume(TK_PROPEN)) {
+        error("top階層に関数が見つかりません");
+    }
+
+    // 仮引数
+    while (!consume(TK_PRCLOSE)) {
+        tk = tokens->data[pos];
+        if (!consume(TK_IDENT)) {
+            error("仮引数の宣言が不正です");
+        }
+        vec_push(node->args, tk->input);
+    }
+    // 関数定義本体（ブレース内）
+    node->func_block = multi_stmt();
+
+    return node;
+}
+
 // プログラム全体のノード作成
 void program(void)
 {
@@ -367,7 +403,7 @@ void program(void)
             break;
         }
 
-        vec_push(code, multi_stmt());
+        vec_push(code, globals());
     }
 
     vec_push(code, NULL);
