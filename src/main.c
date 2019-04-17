@@ -44,13 +44,13 @@ int main(int argc, char **argv)
     }
 
     // トークナイズ
-    tokens = tokenize(source_code);
+    Vector *tokens = tokenize(source_code);
     if (needs_dump_token_list) {
         dump_token_list(tokens);
     }
 
     // パース
-    program();
+    Vector *code = program(tokens);
     // if (needs_dump_node_list) {
     //     dump_node_list(code);
     // }
@@ -62,8 +62,6 @@ int main(int argc, char **argv)
     gen_asm(code);
 
     // エピローグ
-    // 戻り値は最後の評価結果のrax値
-    // ポインタを戻す
     gen_asm_epilog();
 
     return 0;

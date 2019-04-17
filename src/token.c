@@ -7,8 +7,7 @@
 
 #include "shcc.h"
 
-Vector *tokens = 0;
-
+// 複数文字からなるトークン
 static struct {
     TokenType_t ty;
     const char *name;
@@ -20,10 +19,11 @@ static struct {
 // トークン一覧の出力
 void dump_token_list(Vector *token_list)
 {
+    printf("# tokens: ");
+
     for (int i = 0; i < token_list->len; i++) {
         Token *tk = token_list->data[i];
 
-        printf("# ty: ");
         switch (tk->ty) {
             case TK_NUM:            printf("NUM");      break;
             case TK_IDENT:          printf("ID");       break;
@@ -38,8 +38,11 @@ void dump_token_list(Vector *token_list)
                 break;
             }
         }
-        printf("\n");
+        
+        printf(" ");
     }
+
+    printf("\n");
 }
 
 // 一文字式か？

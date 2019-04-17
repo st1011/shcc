@@ -43,12 +43,12 @@ typedef enum {
     ND_BRACE_CLOSE = '}',
     ND_STMT = ';',
 
-    ND_NUM = 0x100,     // 整数のノードの型
-    ND_IDENT,           // 識別子のノードの型
-    ND_CALL,            // 関数呼び出しのノードの型
-    ND_FUNCTION,        // 関数定義のノードの型
-    ND_BLOCK,           // 複文のノードの型
-    ND_RETURN,          // returnのノードの型
+    ND_NUM = 0x100,     // 整数
+    ND_IDENT,           // 識別子
+    ND_CALL,            // 関数呼び出し
+    ND_FUNCTION,        // 関数定義
+    ND_BLOCK,           // 複文（{}）
+    ND_RETURN,          // return
     ND_EQ,              // ==
     ND_NEQ,             // !=
     ND_LESS_EQ,         // <=
@@ -71,9 +71,9 @@ typedef struct {
 
 // トークンの型
 typedef struct {
-    TokenType_t ty;         // 型
-    int val;        // TK_NUMなら数値
-    char *input;    // トークン文字列（エラーメッセージ用）
+    TokenType_t ty;         // トークンの型
+    int val;                // TK_NUMなら数値
+    char *input;            // トークン文字列
 } Token;
 
 // 抽象構文木ノード
@@ -81,15 +81,12 @@ typedef struct Node {
     NodeType_t ty;
     struct Node *lhs;
     struct Node *rhs;
-    int val;                // ND_NUMの場合の数値
-    const char *name;       // ND_IDENTの場合の名前
-    Vector *args;           // ND_CALLの引数
-    Vector *block_stmts;    // ND_BLOCKを構成する式群
-    struct Node *func_block;       // ND_FUNCTIONの定義となるブロック
+    int val;                        // ND_NUMの場合の数値
+    const char *name;               // ND_IDENTの場合の名前
+    Vector *args;                   // ND_CALLの引数
+    Vector *block_stmts;            // ND_BLOCKを構成する式群
+    struct Node *func_block;        // ND_FUNCTIONの定義となるブロック
 } Node;
-
-extern Vector *tokens;
-extern Vector *code;
 
 Vector *new_vector(void);
 void vec_push(Vector *vec, void *elem);
@@ -104,7 +101,7 @@ int map_geti(const Map *map, const char *key);
 Vector *tokenize(char *p);
 void dump_token_list(Vector *token_list);
 
-void program(void);
+Vector *program(Vector *token_list);
 
 void gen_asm(Vector *code);
 void gen_asm_prologue(void);

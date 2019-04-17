@@ -23,13 +23,6 @@ void gen_asm_prologue(void)
 {
     // アセンブリ 前半出力
     printf(".intel_syntax noprefix\n");
-    // printf(".global main\n");
-    // printf("main:\n");
-
-    // // アセンブリ プロローグ
-    // printf("  push rbp\n");     // 呼び出し元のベースポインタを保存
-    // printf("  mov rbp, rsp\n");
-
     printf("# body start\n");
 }
 
@@ -37,10 +30,6 @@ void gen_asm_prologue(void)
 void gen_asm_epilog(void)
 {
     printf("# body end\n");
-
-    // printf("  mov rsp, rbp\n");
-    // printf("  pop rbp\n");
-    // printf("  ret\n");
 }
 
 // 関数プロローグ
@@ -64,7 +53,7 @@ static void gen_asm_func_head(Node *func)
         printf("  mov rax, rbp\n");
         printf("  sub rax, %d\n", stack_offset);
         printf("  mov [rax], %s\n", arg_regs[i]);
-        
+
         stack_offset += stack_unit;
     }
 
@@ -76,9 +65,6 @@ static void gen_asm_func_head(Node *func)
 // 関数エピローグ
 static void gen_asm_func_tail(void)
 {
-    // 戻り値は、すでに格納されているハズ
-    // printf("  pop rax\n");
-
     // 呼び出し元のベースポインタを復帰
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
@@ -113,7 +99,7 @@ static void gen_asm_lval(Node *node)
         offset = stack_offset;
         map_puti(vars, node->name, stack_offset);
 
-        printf("  sub rsp, %d\t\t# stack push\n", stack_unit);   // スタック待避
+        printf("  sub rsp, %d\t\t# stack evacuation\n", stack_unit);   // スタック待避
         stack_offset += stack_unit;
     }
 
@@ -314,18 +300,4 @@ void gen_asm(Vector *code)
         gen_asm_block(funcdef->func_block->block_stmts);
         gen_asm_func_tail();
     }
-}
-
-// 適当なアセンブリを出力して終了する
-void exit_with_asm(void)
-{
-    // アセンブリ 前半出力
-    printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
-
-    printf("  mov rax, 42\n");
-    printf("  ret\n");
-
-    exit(1);
 }

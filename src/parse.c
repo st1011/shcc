@@ -7,14 +7,19 @@
 
 #include "shcc.h"
 
-// ノードリスト
-Vector *code = 0;
+typedef struct {
+    Vector *tokens;
+    int pos;
+} Tokens;
 
-//次のトークン位置
-int pos = 0;
+static Node *expr(Tokens *tks);
+static Node *assign(Tokens *tks);
 
-static Node *expr(void);
-static Node *assign(void);
+// 現在のトークンを返す
+static Token *current_token(Tokens *tks)
+{
+    return tks->tokens->data[tks->pos];
+}
 
 // ノード作成のbody
 static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const char *name)
@@ -75,56 +80,56 @@ static Node *new_node_funcdef(const char *name)
 }
 
 // トークン解析失敗エラー
-static void error(const char *msg)
+static void error(Tokens *tks, const char *msg)
 {
-    Token *tk = tokens->data[pos];
+    Token *tk = current_token(tks);
     fprintf(stderr, "%s: %s\n", msg, tk->input);
 
     exit(1);
 }
 
 // 次トークンがtyか確認し、tyの時のみトークンを一つ進める
-static int consume(int ty)
+static int consume(Tokens *tks, int ty)
 {
-    Token *tk = tokens->data[pos];
+    Token *tk = current_token(tks);
 
     if (tk->ty != ty) {
         return 0;
     }
-    pos++;
+    tks->pos++;
 
     return 1;
 }
 
 // 末尾ノード 括弧か数値
-static Node *term(void)
+static Node *term(Tokens *tks)
 {
-    if (consume(TK_PROPEN)) {
-        Node *node = expr();
+    if (consume(tks, TK_PROPEN)) {
+        Node *node = expr(tks);
 
-        if (!consume(TK_PRCLOSE)) {
-            error("対応する閉じ括弧がありません");
+        if (!consume(tks, TK_PRCLOSE)) {
+            error(tks, "対応する閉じ括弧がありません");
         }
 
         return node;
     }
 
-    Token *tk = tokens->data[pos];
-    if (consume(TK_NUM)) {
+    Token *tk = current_token(tks);
+    if (consume(tks, TK_NUM)) {
         Node *node = new_node_num(tk->val);
 
         return node;
     }
-    if (consume(TK_IDENT)) {
+    if (consume(tks, TK_IDENT)) {
         Node *node = NULL;
 
-        if (consume(TK_PROPEN)) {
+        if (consume(tks, TK_PROPEN)) {
             // 関数呼び出し
             node = new_node_funccall(tk->input);
 
             // 引数
-            while (!consume(TK_PRCLOSE)) {
-                vec_push(node->args, assign());
+            while (!consume(tks, TK_PRCLOSE)) {
+                vec_push(node->args, assign(tks));
             }
         }
         else {
@@ -135,42 +140,42 @@ static Node *term(void)
         return node;
     }
 
-    error("数値でも開き括弧でもないトークンです");
+    error(tks, "数値でも開き括弧でもないトークンです");
 
     return 0;
 }
 
 // 前置増分/減分, 単項式
 // ++ -- ! ~ +-（符号） * & sizeof()
-static Node *monomial(void)
+static Node *monomial(Tokens *tks)
 {
-    Node *node = term();
+    Node *node = term(tks);
 
     return node;
 }
 
 // キャスト演算子
-static Node *cast(void)
+static Node *cast(Tokens *tks)
 {
-    Node *node = monomial();
+    Node *node = monomial(tks);
 
     return node;
 }
 
 // 乗除余演算子
-static Node *mul(void)
+static Node *mul(Tokens *tks)
 {
-    Node *node = cast();
+    Node *node = cast(tks);
 
     for (;;) {
-        if (consume(TK_MUL)) {
-            node = new_node(ND_MUL, node, mul());
+        if (consume(tks, TK_MUL)) {
+            node = new_node(ND_MUL, node, mul(tks));
         }
-        else if (consume(TK_DIV)) {
-            node = new_node(ND_DIV, node, mul());
+        else if (consume(tks, TK_DIV)) {
+            node = new_node(ND_DIV, node, mul(tks));
         }
-        else if (consume(TK_MOD)) {
-            node = new_node(ND_MOD, node, mul());
+        else if (consume(tks, TK_MOD)) {
+            node = new_node(ND_MOD, node, mul(tks));
         }
         else {
             return node;
@@ -179,16 +184,16 @@ static Node *mul(void)
 }
 
 // 加減演算子
-static Node *add(void)
+static Node *add(Tokens *tks)
 {
-    Node *node = mul();
+    Node *node = mul(tks);
 
     for (;;) {
-        if (consume(TK_PLUS)) {
-            node = new_node(ND_PLUS, node, add());
+        if (consume(tks, TK_PLUS)) {
+            node = new_node(ND_PLUS, node, add(tks));
         }
-        else if (consume(TK_MINUS)) {
-            node = new_node(ND_MINUS, node, add());
+        else if (consume(tks, TK_MINUS)) {
+            node = new_node(ND_MINUS, node, add(tks));
         }
         else {       
             return node;
@@ -197,30 +202,30 @@ static Node *add(void)
 }
 
 // シフト演算子
-static Node *shift(void)
+static Node *shift(Tokens *tks)
 {
-    Node *node = add();
+    Node *node = add(tks);
 
     return node;
 }
 
 // 比較演算子
-static Node *comparison(void)
+static Node *comparison(Tokens *tks)
 {
-    Node *node = shift();
+    Node *node = shift(tks);
 
     for (;;) {
-        if (consume(TK_LESS)) {
-            node = new_node(ND_LESS, node, comparison());
+        if (consume(tks, TK_LESS)) {
+            node = new_node(ND_LESS, node, comparison(tks));
         }
-        else if (consume(TK_GREATER)) {
-            node = new_node(ND_GREATER, node, comparison());
+        else if (consume(tks, TK_GREATER)) {
+            node = new_node(ND_GREATER, node, comparison(tks));
         }
-        else if (consume(TK_LESS_EQ)) {
-            node = new_node(ND_LESS_EQ, node, comparison());
+        else if (consume(tks, TK_LESS_EQ)) {
+            node = new_node(ND_LESS_EQ, node, comparison(tks));
         }
-        else if (consume(TK_GREATER_EQ)) {
-            node = new_node(ND_GREATER_EQ, node, comparison());
+        else if (consume(tks, TK_GREATER_EQ)) {
+            node = new_node(ND_GREATER_EQ, node, comparison(tks));
         }
         else {    
             return node;
@@ -230,16 +235,16 @@ static Node *comparison(void)
 }
 
 // 等価演算子
-static Node *equality(void)
+static Node *equality(Tokens *tks)
 {
-    Node *node = comparison();
+    Node *node = comparison(tks);
 
     for (;;) {
-        if (consume(TK_EQ)) {
-            node = new_node(ND_EQ, node, comparison());
+        if (consume(tks, TK_EQ)) {
+            node = new_node(ND_EQ, node, comparison(tks));
         }
-        else if (consume(TK_NEQ)) {
-            node = new_node(ND_NEQ, node, comparison());
+        else if (consume(tks, TK_NEQ)) {
+            node = new_node(ND_NEQ, node, comparison(tks));
         }
         else {    
             return node;
@@ -248,61 +253,61 @@ static Node *equality(void)
 }
 
 // ビットAND
-static Node *bit_and(void)
+static Node *bit_and(Tokens *tks)
 {
-    Node *node = equality();
+    Node *node = equality(tks);
 
     return node;
 }
 
 // ビットXOR
-static Node *bit_xor(void)
+static Node *bit_xor(Tokens *tks)
 {
-    Node *node = bit_and();
+    Node *node = bit_and(tks);
 
     return node;
 }
 
 // ビットOR
-static Node *bit_or(void)
+static Node *bit_or(Tokens *tks)
 {
-    Node *node = bit_xor();
+    Node *node = bit_xor(tks);
 
     return node;
 }
 
 // 論理AND
-static Node *logical_and(void)
+static Node *logical_and(Tokens *tks)
 {
-    Node *node = bit_or();
+    Node *node = bit_or(tks);
 
     return node;
 }
 
 // 論理OR
-static Node *logical_or(void)
+static Node *logical_or(Tokens *tks)
 {
-    Node *node = logical_and();
+    Node *node = logical_and(tks);
 
     return node;
 }
 
 // 条件演算子
-static Node *conditional(void)
+static Node *conditional(Tokens *tks)
 {
-    Node *node = logical_or();
+    Node *node = logical_or(tks);
 
     return node;
 }
 
 // 代入演算子
-static Node *assign(void)
+static Node *assign(Tokens *tks)
 {
-    Node *node = conditional();
+    Node *node = conditional(tks);
 
     for (;;) {
-        if (consume(TK_ASSIGN)) {
-            node = new_node(ND_ASSIGN, node, assign());
+        if (consume(tks, TK_ASSIGN)) {
+            node = new_node(ND_ASSIGN, node, assign(tks));
         }
         else {    
             return node;
@@ -311,102 +316,105 @@ static Node *assign(void)
 }
 
 // 一つの式
-static Node *expr(void)
+static Node *expr(Tokens *tks)
 {
-    Node *node = assign();
+    Node *node = assign(tks);
 
     return node;
 }
 
 // ステートメントノード
-static Node *stmt(void)
+static Node *stmt(Tokens *tks)
 {
     Node *node;
     
-    if (consume(TK_RETURN)) {
-        node = new_node_return(expr());
+    if (consume(tks, TK_RETURN)) {
+        node = new_node_return(expr(tks));
     }
     else {
-        node = expr();
+        node = expr(tks);
     }
 
-    if (!consume(TK_STMT)) {
-        error("';'で終わらないトークンです");
+    if (!consume(tks, TK_STMT)) {
+        error(tks, "';'で終わらないトークンです");
     }
 
     return node;
 }
 
 // 複文 / ブロック（{}）
-static Node *multi_stmt(void)
+static Node *multi_stmt(Tokens *tks)
 {
     Node *node = new_node_block();
 
-    if (!consume(TK_BRACE_OPEN)) {
-        error("'{'で始まらないトークンです");   
+    if (!consume(tks, TK_BRACE_OPEN)) {
+        error(tks, "'{'で始まらないトークンです");   
     }
 
     for (;;) {
-        Token *tk = tokens->data[pos];
+        Token *tk = current_token(tks);
         if (tk->ty == TK_BRACE_OPEN) {
-            vec_push(node->block_stmts, multi_stmt());
+            vec_push(node->block_stmts, multi_stmt(tks));
         }
-        else if (consume(TK_BRACE_CLOSE)) {
+        else if (consume(tks, TK_BRACE_CLOSE)) {
             vec_push(node->block_stmts, NULL);
 
             return node;
         }
         else {
-            vec_push(node->block_stmts, stmt());
+            vec_push(node->block_stmts, stmt(tks));
         }
     }
 }
 
 // globalレベルのノード
-static Node *globals(void)
+static Node *globals(Tokens *tks)
 {
-    Token *tk = tokens->data[pos];
+    Token *tk = current_token(tks);
 
-    if (!consume(TK_IDENT)) {
-        error("top階層に関数が見つかりません");
+    if (!consume(tks, TK_IDENT)) {
+        error(tks, "top階層に関数が見つかりません");
     }
 
     Node *node = new_node_funcdef(tk->input);
 
-    if (!consume(TK_PROPEN)) {
-        error("top階層に関数が見つかりません");
+    if (!consume(tks, TK_PROPEN)) {
+        error(tks, "top階層に関数が見つかりません");
     }
 
     // 仮引数
-    while (!consume(TK_PRCLOSE)) {
-        tk = tokens->data[pos];
-        if (!consume(TK_IDENT)) {
-            error("仮引数の宣言が不正です");
+    while (!consume(tks, TK_PRCLOSE)) {
+        tk = current_token(tks);
+        if (!consume(tks, TK_IDENT)) {
+            error(tks, "仮引数の宣言が不正です");
         }
         vec_push(node->args, tk->input);
     }
     // 関数定義本体（ブレース内）
-    node->func_block = multi_stmt();
+    node->func_block = multi_stmt(tks);
 
     return node;
 }
 
 // プログラム全体のノード作成
-void program(void)
+Vector *program(Vector *token_list)
 {
-    code = new_vector();
+    Vector *code = new_vector();
 
+    Tokens tokens = {.tokens = token_list, .pos = 0};
     for (;;) {
-        Token *tk = tokens->data[pos];
+        Token *tk = current_token(&tokens);
 
         if (tk->ty == TK_EOF) {
             break;
         }
 
-        vec_push(code, globals());
+        vec_push(code, globals(&tokens));
     }
 
     vec_push(code, NULL);
+
+    return code;
 }
 
 
