@@ -340,9 +340,13 @@ static Node *multi_stmt(void)
     }
 
     for (;;) {
-        if (consume(TK_BRACE_CLOSE)) {
+        Token *tk = tokens->data[pos];
+        if (tk->ty == TK_BRACE_OPEN) {
+            vec_push(node->block_stmts, multi_stmt());
+        }
+        else if (consume(TK_BRACE_CLOSE)) {
             vec_push(node->block_stmts, NULL);
-            
+
             return node;
         }
         else {

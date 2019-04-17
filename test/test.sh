@@ -97,5 +97,9 @@ try 3 '{return 7 % 4;}'
 try 3 '{return (3+4) % 4;}'
 try 0 '{return 10 % 10;}'
 
+try 30 '{a=10;{b=20;}c=30; return c;}'
+try 10 '{a=10;{a=20;}c=30; return a;}'
+
+
 echo OK
 
