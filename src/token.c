@@ -16,12 +16,13 @@ static struct {
     {TK_EQ, "=="}, {TK_NEQ, "!="},
 };
 
-void print_tokens(Vector *vec)
+// トークン一覧の出力
+void dump_token_list(Vector *token_list)
 {
-    for (int i = 0; i < vec->len; i++) {
-        Token *tk = vec->data[i];
+    for (int i = 0; i < token_list->len; i++) {
+        Token *tk = token_list->data[i];
 
-        printf("ty: ");
+        printf("# ty: ");
         switch (tk->ty) {
             case TK_NUM:            printf("NUM");      break;
             case TK_IDENT:          printf("ID");       break;

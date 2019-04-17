@@ -11,7 +11,7 @@
 static Map *vars = 0;
 static int stack_offset = 0;
 
-static const int stack_unit = 16;
+static const int stack_unit = 8;
 
 // 引数に使うレジスタ
 static const char *arg_regs[ ] = {
@@ -29,13 +29,15 @@ void gen_asm_prologue(void)
     // アセンブリ プロローグ
     printf("  push rbp\n");     // 呼び出し元のベースポインタを保存
     printf("  mov rbp, rsp\n");
-    // // 現在の言語仕様に存在する変数領域を一括で待避する
-    // printf("  sub rsp, %d\n", ('z' - 'a' + 1) * 8);
+
+    printf("# body start\n");
 }
 
 // エピローグアセンブリ出力
 void gen_asm_epilog(void)
 {
+    printf("# body end\n");
+
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
@@ -75,7 +77,7 @@ static void gen_asm_lval(Node *node)
 
     printf("  mov rax, rbp\n");
     printf("  sub rax, %d\n", offset);
-    printf("  push rax\n");
+    printf("  push rax\t\t# var addr\n");
 }
 
 // アセンブリ生成本体
@@ -103,22 +105,13 @@ static void gen_asm_body(Node *node)
     }
     if (node->ty == ND_CALL) {
         // 関数呼び出し
-        
-        // 16B align
-        {
-            // div命令は rax =  ((rdx << 64) | rax) / rdi
-            printf("  mov rdx, 0\n");
-            printf("  mov rax, rsp\n");
-            printf("  mov rdi, %d\n", stack_unit);
-            printf("  div rdi\n");
-            printf("  sub rsp, rdx\n");
-        }
-        // 引数をレジスタに格納する
-        // 引数の数
-        printf("  mov  rax, %d\n", node->args->len);
         // 今はとりあえず上限までレジスタ格納しておく
-        // 引数の個数多すぎない？
+
+        // 引数の個数チェック
         assert(node->args->len <= NUMOF(arg_regs));
+        
+        // 引数の数
+        printf("  mov rax, %d\n", node->args->len);
 
         // 一度すべての計算結果をスタックに積む
         for (int i = (int)node->args->len - 1; i >= 0; i--) {
@@ -128,7 +121,22 @@ static void gen_asm_body(Node *node)
         for (int i = 0; i < node->args->len; i++) {
             printf("  pop %s\n", arg_regs[i]);
         }
+
+        // 16B align
+        int align = stack_offset % 16;
+        if (align != 0) {
+            printf("  sub rsp, 8\t\t# 16B align\n");
+            stack_offset += 8;
+        }
+
         printf("  call %s\n", node->name);
+        if (align != 0) {
+            printf("  add rsp, 8\t\t# 16B align\n");
+            stack_offset -= 8;
+        }
+
+        // 戻り値
+        printf("  push rax\n");
         return;
     }
 

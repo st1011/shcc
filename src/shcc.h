@@ -83,7 +83,7 @@ void *map_get(const Map *map, const char *key);
 int map_geti(const Map *map, const char *key);
 
 Vector *tokenize(char *p);
-void print_tokens(Vector *vec);
+void dump_token_list(Vector *token_list);
 
 void program(void);
 

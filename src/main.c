@@ -12,22 +12,48 @@ void runtest(void);
 // main
 int main(int argc, char **argv)
 {
-    if (argc == 2 && (strcmp(argv[1], "-test") == 0)) {
-        runtest();
-        return 0;
-    }
+    bool needs_dump_token_list = false;
+    // bool needs_dump_node_list = false;
+    char *source_code = NULL;
 
-    if (argc != 2) {
-        fprintf(stderr, "引数の個数が正しくありません\n");
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[1], "-test") == 0) {
+            runtest();
+            return 0;
+        }
+        else if (strcmp(argv[i], "-dumptoken") == 0) {
+            needs_dump_token_list = true;
+        }
+        // else if (strcmp(argv[i], "-dumpnode") == 0) {
+        //     needs_dump_node_list = true;
+        // }
+        else if (source_code == NULL) {
+            source_code = argv[i];
+        }
+        else {
+            // コードに相当する引数が複数ある（未定義のコマンド）
+            fprintf(stderr, "引数が正しくありません\n");
+            return 1;
+        }
+    }
+    
+    // ソースコードが見つからなかった
+    if (source_code == NULL) {
+        fprintf(stderr, "引数が正しくありません\n");
         return 1;
     }
 
     // トークナイズ
-    tokens = tokenize(argv[1]);
-    // print_tokens(tokens);
+    tokens = tokenize(source_code);
+    if (needs_dump_token_list) {
+        dump_token_list(tokens);
+    }
 
     // パース
     program();
+    // if (needs_dump_node_list) {
+    //     dump_node_list(code);
+    // }
 
     // プロローグ
     gen_asm_prologue();

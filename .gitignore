@@ -5,3 +5,4 @@ tmp*
 bin/
 obj/
 test/out*
+test/core

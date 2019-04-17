@@ -232,6 +232,7 @@ void program(void)
     vec_push(code, NULL);
 }
 
+
 // [種類] [演算子] [結合規則]
 // 上ほど優先順位高い
 

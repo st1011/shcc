@@ -7,7 +7,7 @@ try() {
 	input="$2"
 
 	../bin/shcc "$input" > out.s
-	gcc -o out out.s exfunc.o
+	gcc -g -o out out.s exfunc.o
 	./out
 	actual="$?"
 
@@ -68,6 +68,11 @@ try 42 'exfunc3(42 21);return 42;'
 try 21 'exfunc3(21+21 15+6);return 21;'
 try 42 'a=21;b=42;exfunc3(a b);return 42;'
 try 21 'a=21;b=42;exfunc3(a+b b);return 21;'
+
+try 42 'return exfunc4();'
+try 42 'a = exfunc4();return a;'
+try 42 'a = exfunc4();b=exfunc4();return a;'
+try 42 'a = exfunc4();b=exfunc4();return b;'
 
 echo OK
 
