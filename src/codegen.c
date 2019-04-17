@@ -114,12 +114,18 @@ static void gen_asm_body(Node *node)
             printf("  sub rsp, rdx\n");
         }
         // 引数をレジスタに格納する
+        // 引数の数
+        printf("  mov  rax, %d\n", node->args->len);
         // 今はとりあえず上限までレジスタ格納しておく
-        for (int i = 0; i < node->args->len; i++) {
-            // 引数の個数多すぎない？
-            assert(i < NUMOF(arg_regs));
+        // 引数の個数多すぎない？
+        assert(node->args->len <= NUMOF(arg_regs));
 
+        // 一度すべての計算結果をスタックに積む
+        for (int i = (int)node->args->len - 1; i >= 0; i--) {
             gen_asm_body(node->args->data[i]);
+        }
+        // スタックから取り出しながら引数レジスタに格納する
+        for (int i = 0; i < node->args->len; i++) {
             printf("  pop %s\n", arg_regs[i]);
         }
         printf("  call %s\n", node->name);
