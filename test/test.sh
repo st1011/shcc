@@ -2,6 +2,11 @@
 
 cd `dirname $0`
 
+# テスト用の外部ファイルのコンパイルが未実行なら実行
+if [ ! -e "exfunc.o" ]; then
+	gcc -c "exfunc.c"
+fi
+
 try() {
 	expected="$1"
 	input="$2"
