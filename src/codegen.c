@@ -93,7 +93,7 @@ static void gen_asm_lval(Node *node)
     if (v != NULL) {
         // すでに存在する変数
         offset = *v;
-    } 
+    }
     else {
         // 新しい変数（変数定義）
         offset = stack_offset;
@@ -137,7 +137,7 @@ static void gen_asm_body(Node *node)
 
         // 引数の個数チェック
         assert(node->args->len <= NUMOF(arg_regs));
-        
+
         // 引数の数
         if (node->args->len > 0) {
             printf("  mov rax, %d\n", node->args->len);
@@ -288,6 +288,9 @@ static void gen_asm_block(Vector *block_stmts)
 // アセンブリ出力
 void gen_asm(Vector *code)
 {
+    // プロローグ
+    gen_asm_prologue();
+
     // 1ループ1関数定義
     for (int i = 0; code->data[i]; i++) {
         Node *funcdef = code->data[i];
@@ -300,4 +303,7 @@ void gen_asm(Vector *code)
         gen_asm_block(funcdef->func_block->block_stmts);
         gen_asm_func_tail();
     }
+
+    // エピローグ
+    gen_asm_epilog();
 }

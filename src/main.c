@@ -36,7 +36,7 @@ int main(int argc, char **argv)
             return 1;
         }
     }
-    
+
     // ソースコードが見つからなかった
     if (source_code == NULL) {
         fprintf(stderr, "引数が正しくありません\n");
@@ -55,14 +55,8 @@ int main(int argc, char **argv)
     //     dump_node_list(code);
     // }
 
-    // プロローグ
-    gen_asm_prologue();
-
-    // 先頭の式から順にコード生成
+    // アセンブリ出力
     gen_asm(code);
-
-    // エピローグ
-    gen_asm_epilog();
 
     return 0;
 }

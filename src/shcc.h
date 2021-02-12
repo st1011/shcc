@@ -104,8 +104,5 @@ void dump_token_list(Vector *token_list);
 Vector *program(Vector *token_list);
 
 void gen_asm(Vector *code);
-void gen_asm_prologue(void);
-void gen_asm_epilog(void);
-void exit_with_asm(void);
 
 #endif // ifndef SHCC_H_
