@@ -7,13 +7,17 @@ if [ ! -e "exfunc.o" ]; then
 	gcc -c "exfunc.c"
 fi
 
+# テスト用のメソッド
+# 第2引数をソースコードとしてコンパイラへ入力・実行し第1引数の予測結果と比較します。
+# Arg 1: 予想される返却値
+# Arg 2: ソースコード
 try() {
 	expected="$1"
 	input="$2"
 
-	../bin/shcc "$input" > out.s
-	gcc -g -o out out.s exfunc.o
-	./out
+	../bin/shcc "$input" > testout.s
+	gcc -g -o testout testout.s exfunc.o
+	./testout
 	actual="$?"
 
 	if [ "$actual" = "$expected" ]; then

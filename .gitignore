@@ -4,5 +4,5 @@
 tmp*
 bin/
 obj/
-test/out*
+test/testout*
 test/core
