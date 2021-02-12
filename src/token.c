@@ -38,12 +38,27 @@ void dump_token_list(Vector *token_list)
                 break;
             }
         }
-        
+
         printf(" ");
     }
 
     printf("\n");
 }
+
+// 識別子の先頭になり得る文字か？
+// [a-zA-Z_]
+static bool is_idnet_head_char(char ch)
+{
+    return isalpha(ch) || ch == '_';
+}
+
+// 識別の構成要素になり得る文字か？
+// [a-zA-Z0-9_]
+static bool is_idnet_char(char ch)
+{
+    return is_idnet_head_char(ch) || isdigit(ch);
+}
+
 
 // 一文字式か？
 static bool is_oneop(char ch)
@@ -75,7 +90,7 @@ static char *ident(Vector *tk, const Map *rwords, char *p)
 {
     // キーワード文字列を抜き出す
     int len = 1;
-    while (isalpha(p[len]) || isdigit(p[len]) || p[len] == '_') {
+    while (is_idnet_char(p[len])) {
         len++;
     }
     char *name = (char *)calloc(len + 1, sizeof(char));
@@ -142,7 +157,7 @@ Vector *tokenize(char *p)
 
         // 識別子
         // 変数も予約後もここで
-        if (isalpha(*p) || *p == '_') {
+        if (is_idnet_head_char(*p)) {
             p = ident(tk, rwords, p);
             continue;
         }
