@@ -110,6 +110,7 @@ try 0 'main(){return 10 % 10;}'
 try 30 'main(){a=10;{b=20;}c=30; return c;}'
 try 20 'main(){a=10;{a=20; return a;}c=30; return a;}'
 
+try 20 'foo(){;} main(){a=20; foo(); return a;}'
 try 20 'foo(){a=10;} main(){a=20; return a;}'
 try 20 'foo(){a=10;} main(){foo(); return 20;}'
 try 20 'foo(){a=10;} main(){a=20; foo();return a;}'

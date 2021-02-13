@@ -33,13 +33,19 @@ void gen_asm_epilog(void)
 // 関数プロローグ
 static void gen_asm_func_head(Node *func)
 {
+    puts("");
     printf(".global %s\n", func->name);
     printf("%s:\n", func->name);
 
     // 呼び出し元のベースポインタを保存
+    printf("  # function prologue begin\n");
     printf("  push rbp\n");
-    stack_offset += stack_unit;
     printf("  mov rbp, rsp\n");
+
+    // pushするとスタックポインタをずらす->格納としてくれるので意識しなくてよいが
+    // prologueではRSPを手動でずらすことになる
+    // RSPは使用済みのスタックを指しているので、上書きしないように少なくとも1単位はずらす必要がある
+    stack_offset += stack_unit;
 
     // 引数の個数チェック
     assert(func->args->len <= NUMOF(arg_regs));
@@ -49,6 +55,7 @@ static void gen_asm_func_head(Node *func)
     {
         map_puti(vars, func->args->data[i], stack_offset);
 
+        // ベースポインタとのオフセットを算出し、引数レジスタの値をオフセット位置へ格納する
         printf("  mov rax, rbp\n");
         printf("  sub rax, %d\n", stack_offset);
         printf("  mov [rax], %s\n", arg_regs[i]);
@@ -56,19 +63,23 @@ static void gen_asm_func_head(Node *func)
         stack_offset += stack_unit;
     }
 
-    if (stack_offset > 0)
-    {
-        printf("  sub rsp, %d\t\t# stack evacuation\n", stack_offset); // スタック待避
-    }
+    printf("  sub rsp, %d\t\t# stack evacuation\n", stack_offset); // スタック待避
+    printf("  # function prologue end\n");
+    puts("");
 }
 
 // 関数エピローグ
 static void gen_asm_func_tail(void)
 {
     // 呼び出し元のベースポインタを復帰
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
+    printf("  # function epilog begin\n");
+    printf("  leave\n");
+    // 下記はleaveと等価なコード
+    // printf("  mov rsp, rbp\n");
+    // printf("  pop rbp\n");
     printf("  ret\n");
+    printf("  # function epilog end\n");
+    puts("");
 }
 
 // ノード解析失敗エラー
@@ -167,10 +178,10 @@ static void gen_asm_body(Node *node)
             printf("  pop %s\n", arg_regs[i]);
         }
 
-        // 16B align
         int align = stack_offset % 16;
         if (align != 0)
         {
+            // 関数呼び出し時のRSPは16Bアラインされている必要がある
             printf("  sub rsp, 8\t\t# 16B align\n");
             stack_offset += 8;
         }
@@ -178,7 +189,8 @@ static void gen_asm_body(Node *node)
         printf("  call %s\n", node->name);
         if (align != 0)
         {
-            printf("  add rsp, 8\t\t# 16B align\n");
+            // 呼び出し時にアラインのためずらしたRSPを戻す
+            printf("  add rsp, 8\t\t# restore 16B align\n");
             stack_offset -= 8;
         }
 
