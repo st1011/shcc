@@ -73,9 +73,10 @@ static Node *new_node_block(void)
     return new_node(ND_BLOCK, 0, 0);
 }
 
-// Block ノード
+// 関数定義ノード
 static Node *new_node_funcdef(const char *name)
 {
+    // TODO CALLでよいのか？
     return new_node_body(ND_CALL, 0, 0, 0, name);
 }
 
