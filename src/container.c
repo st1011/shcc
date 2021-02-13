@@ -23,7 +23,8 @@ Vector *new_vector(void)
 // 空きがなければ2倍に拡張する
 void vec_push(Vector *vec, void *elem)
 {
-    if (vec->capacity == vec->len) {
+    if (vec->capacity == vec->len)
+    {
         vec->capacity *= 2;
         vec->data = realloc(vec->data, sizeof(void *) * vec->capacity);
     }
@@ -75,8 +76,10 @@ void map_puti(Map *map, const char *key, int val)
 void *map_get(const Map *map, const char *key)
 {
     // 末尾から探すので、古いデータを上書きする必要が無い
-    for (int i = map->keys->len - 1; i >= 0; i--) {
-        if (strcmp(map->keys->data[i], key) == 0) {
+    for (int i = map->keys->len - 1; i >= 0; i--)
+    {
+        if (strcmp(map->keys->data[i], key) == 0)
+        {
             return map->vals->data[i];
         }
     }
@@ -89,28 +92,29 @@ int map_geti(const Map *map, const char *key)
 {
     int *v = map_get(map, key);
 
-    if (v != NULL) {
+    if (v != NULL)
+    {
         return *v;
     }
 
     return 0;
 }
 
-
 // 簡易テスト用
 static int expect(int line, int expected, int actual)
 {
-    if (expected == actual) {
+    if (expected == actual)
+    {
         return 0;
     }
 
-    fprintf(stderr, "%d: %d expected, but got %d\n", 
-        line, expected, actual);
+    fprintf(stderr, "%d: %d expected, but got %d\n",
+            line, expected, actual);
 
     exit(1);
 }
 
-#define EXPECT(exp, act)        expect(__LINE__, (exp), (act))
+#define EXPECT(exp, act) expect(__LINE__, (exp), (act))
 
 // vector関係のテスト
 static void test_vector(void)
@@ -118,7 +122,8 @@ static void test_vector(void)
     Vector *vec = new_vector();
     EXPECT(0, vec->len);
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i++)
+    {
         vec_push(vec, (void *)(intptr_t)i);
     }
 
@@ -146,7 +151,6 @@ static void test_map(void)
 
     map_puti(map, "foobar", 8);
     EXPECT(8, map_geti(map, "foobar"));
-
 }
 
 // vector用テスト

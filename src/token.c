@@ -8,12 +8,15 @@
 #include "shcc.h"
 
 // 複数文字からなるトークン
-static struct {
+static struct
+{
     TokenType_t ty;
     const char *name;
-} symbols[ ] = {
-    {TK_EQ, "=="}, {TK_NEQ, "!="},
-    {TK_LESS_EQ, "<="}, {TK_GREATER_EQ, ">="},
+} symbols[] = {
+    {TK_EQ, "=="},
+    {TK_NEQ, "!="},
+    {TK_LESS_EQ, "<="},
+    {TK_GREATER_EQ, ">="},
 };
 
 // トークン一覧の出力
@@ -21,22 +24,41 @@ void dump_token_list(Vector *token_list)
 {
     printf("# tokens: ");
 
-    for (int i = 0; i < token_list->len; i++) {
+    for (int i = 0; i < token_list->len; i++)
+    {
         Token *tk = token_list->data[i];
 
-        switch (tk->ty) {
-            case TK_NUM:            printf("NUM");      break;
-            case TK_IDENT:          printf("ID");       break;
-            case TK_RETURN:         printf("RET");      break;
-            case TK_EQ:             printf("==");       break;
-            case TK_NEQ:            printf("!=");       break;
-            case TK_LESS_EQ:        printf("<=");       break;
-            case TK_GREATER_EQ:     printf(">=");       break;
-            case TK_EOF:            printf("EOF");      break;
-            default: {
-                printf("%c", tk->ty);
-                break;
-            }
+        switch (tk->ty)
+        {
+        case TK_NUM:
+            printf("NUM");
+            break;
+        case TK_IDENT:
+            printf("ID");
+            break;
+        case TK_RETURN:
+            printf("RET");
+            break;
+        case TK_EQ:
+            printf("==");
+            break;
+        case TK_NEQ:
+            printf("!=");
+            break;
+        case TK_LESS_EQ:
+            printf("<=");
+            break;
+        case TK_GREATER_EQ:
+            printf(">=");
+            break;
+        case TK_EOF:
+            printf("EOF");
+            break;
+        default:
+        {
+            printf("%c", tk->ty);
+            break;
+        }
         }
 
         printf(" ");
@@ -59,19 +81,11 @@ static bool is_idnet_char(char ch)
     return is_idnet_head_char(ch) || isdigit(ch);
 }
 
-
 // 一文字式か？
 static bool is_oneop(char ch)
 {
     // 数値以外で1文字式
-    return ch == TK_PLUS || ch == TK_MINUS
-        || ch == TK_MUL || ch == TK_DIV
-        || ch == TK_MOD
-        || ch == TK_PROPEN || ch == TK_PRCLOSE
-        || ch == TK_ASSIGN
-        || ch == TK_LESS || ch == TK_GREATER
-        || ch == ND_BRACE_OPEN || ch == ND_BRACE_CLOSE
-        || ch == TK_STMT;
+    return ch == TK_PLUS || ch == TK_MINUS || ch == TK_MUL || ch == TK_DIV || ch == TK_MOD || ch == TK_PROPEN || ch == TK_PRCLOSE || ch == TK_ASSIGN || ch == TK_LESS || ch == TK_GREATER || ch == ND_BRACE_OPEN || ch == ND_BRACE_CLOSE || ch == TK_STMT;
 }
 
 // 予約後のマップを生成・取得
@@ -90,7 +104,8 @@ static char *ident(Vector *tk, const Map *rwords, char *p)
 {
     // キーワード文字列を抜き出す
     int len = 1;
-    while (is_idnet_char(p[len])) {
+    while (is_idnet_char(p[len]))
+    {
         len++;
     }
     char *name = (char *)calloc(len + 1, sizeof(char));
@@ -99,7 +114,8 @@ static char *ident(Vector *tk, const Map *rwords, char *p)
 
     // 抜き出した文字列の識別子を調べる
     int ty = map_geti(rwords, name);
-    if (ty == 0) {
+    if (ty == 0)
+    {
         // 予約後ではないので、変数
         ty = TK_IDENT;
     }
@@ -114,10 +130,12 @@ static int multi_symbols(Vector *tk, char *p)
 {
     int len = 0;
 
-    for (int i = 0; i < NUMOF(symbols); i++) {
+    for (int i = 0; i < NUMOF(symbols); i++)
+    {
         const char *name = symbols[i].name;
 
-        if (strncmp(p, name, strlen(name)) == 0) {
+        if (strncmp(p, name, strlen(name)) == 0)
+        {
             vec_push_token(tk, symbols[i].ty, 0, p);
             len = strlen(name);
             break;
@@ -134,22 +152,26 @@ Vector *tokenize(char *p)
     Vector *tk = new_vector();
     Map *rwords = get_reserved_words();
 
-    while (*p) {
+    while (*p)
+    {
         // skip space
-        if (isspace(*p)) {
+        if (isspace(*p))
+        {
             p++;
             continue;
         }
 
         // 複数文字のoperand
         int next = multi_symbols(tk, p);
-        if (next != 0) {
+        if (next != 0)
+        {
             p += next;
             continue;
         }
 
         // operand
-        if (is_oneop(*p)) {
+        if (is_oneop(*p))
+        {
             vec_push_token(tk, *p, 0, p);
             p++;
             continue;
@@ -157,13 +179,15 @@ Vector *tokenize(char *p)
 
         // 識別子
         // 変数も予約後もここで
-        if (is_idnet_head_char(*p)) {
+        if (is_idnet_head_char(*p))
+        {
             p = ident(tk, rwords, p);
             continue;
         }
 
         // number
-        if (isdigit(*p)) {
+        if (isdigit(*p))
+        {
             char *bp = p;
             vec_push_token(tk, TK_NUM, strtol(p, &p, 10), bp);
             continue;

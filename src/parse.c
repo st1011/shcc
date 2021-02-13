@@ -7,7 +7,8 @@
 
 #include "shcc.h"
 
-typedef struct {
+typedef struct
+{
     Vector *tokens;
     int pos;
 } Tokens;
@@ -103,14 +104,15 @@ static bool is_match_next_token(Tokens *tks, int ty)
     Token *tk = current_token(tks);
 
     return tk->ty == ty;
-    }
+}
 
 // 次トークンがtyか確認し、tyの時のみトークンを一つ進める
 static bool consume(Tokens *tks, int ty)
 {
     bool is_match = is_match_next_token(tks, ty);
-    if (is_match) {
-    tks->pos++;
+    if (is_match)
+    {
+        tks->pos++;
     }
 
     return is_match;
@@ -119,10 +121,12 @@ static bool consume(Tokens *tks, int ty)
 // 末尾ノード 括弧か数値
 static Node *term(Tokens *tks)
 {
-    if (consume(tks, TK_PROPEN)) {
+    if (consume(tks, TK_PROPEN))
+    {
         Node *node = expr(tks);
 
-        if (!consume(tks, TK_PRCLOSE)) {
+        if (!consume(tks, TK_PRCLOSE))
+        {
             error(tks, "対応する閉じ括弧がありません");
         }
 
@@ -130,24 +134,29 @@ static Node *term(Tokens *tks)
     }
 
     Token *tk = current_token(tks);
-    if (consume(tks, TK_NUM)) {
+    if (consume(tks, TK_NUM))
+    {
         Node *node = new_node_num(tk->val);
 
         return node;
     }
-    if (consume(tks, TK_IDENT)) {
+    if (consume(tks, TK_IDENT))
+    {
         Node *node = NULL;
 
-        if (consume(tks, TK_PROPEN)) {
+        if (consume(tks, TK_PROPEN))
+        {
             // 関数呼び出し
             node = new_node_funccall(tk->input);
 
             // 引数
-            while (!consume(tks, TK_PRCLOSE)) {
+            while (!consume(tks, TK_PRCLOSE))
+            {
                 vec_push(node->args, assign(tks));
             }
         }
-        else {
+        else
+        {
             // 変数
             node = new_node_ident(tk->input);
         }
@@ -182,17 +191,22 @@ static Node *mul(Tokens *tks)
 {
     Node *node = cast(tks);
 
-    for (;;) {
-        if (consume(tks, TK_MUL)) {
+    for (;;)
+    {
+        if (consume(tks, TK_MUL))
+        {
             node = new_node(ND_MUL, node, mul(tks));
         }
-        else if (consume(tks, TK_DIV)) {
+        else if (consume(tks, TK_DIV))
+        {
             node = new_node(ND_DIV, node, mul(tks));
         }
-        else if (consume(tks, TK_MOD)) {
+        else if (consume(tks, TK_MOD))
+        {
             node = new_node(ND_MOD, node, mul(tks));
         }
-        else {
+        else
+        {
             return node;
         }
     }
@@ -203,14 +217,18 @@ static Node *add(Tokens *tks)
 {
     Node *node = mul(tks);
 
-    for (;;) {
-        if (consume(tks, TK_PLUS)) {
+    for (;;)
+    {
+        if (consume(tks, TK_PLUS))
+        {
             node = new_node(ND_PLUS, node, add(tks));
         }
-        else if (consume(tks, TK_MINUS)) {
+        else if (consume(tks, TK_MINUS))
+        {
             node = new_node(ND_MINUS, node, add(tks));
         }
-        else {       
+        else
+        {
             return node;
         }
     }
@@ -229,24 +247,29 @@ static Node *comparison(Tokens *tks)
 {
     Node *node = shift(tks);
 
-    for (;;) {
-        if (consume(tks, TK_LESS)) {
+    for (;;)
+    {
+        if (consume(tks, TK_LESS))
+        {
             node = new_node(ND_LESS, node, comparison(tks));
         }
-        else if (consume(tks, TK_GREATER)) {
+        else if (consume(tks, TK_GREATER))
+        {
             node = new_node(ND_GREATER, node, comparison(tks));
         }
-        else if (consume(tks, TK_LESS_EQ)) {
+        else if (consume(tks, TK_LESS_EQ))
+        {
             node = new_node(ND_LESS_EQ, node, comparison(tks));
         }
-        else if (consume(tks, TK_GREATER_EQ)) {
+        else if (consume(tks, TK_GREATER_EQ))
+        {
             node = new_node(ND_GREATER_EQ, node, comparison(tks));
         }
-        else {    
+        else
+        {
             return node;
         }
     }
-
 }
 
 // 等価演算子
@@ -254,14 +277,18 @@ static Node *equality(Tokens *tks)
 {
     Node *node = comparison(tks);
 
-    for (;;) {
-        if (consume(tks, TK_EQ)) {
+    for (;;)
+    {
+        if (consume(tks, TK_EQ))
+        {
             node = new_node(ND_EQ, node, comparison(tks));
         }
-        else if (consume(tks, TK_NEQ)) {
+        else if (consume(tks, TK_NEQ))
+        {
             node = new_node(ND_NEQ, node, comparison(tks));
         }
-        else {    
+        else
+        {
             return node;
         }
     }
@@ -320,11 +347,14 @@ static Node *assign(Tokens *tks)
 {
     Node *node = conditional(tks);
 
-    for (;;) {
-        if (consume(tks, TK_ASSIGN)) {
+    for (;;)
+    {
+        if (consume(tks, TK_ASSIGN))
+        {
             node = new_node(ND_ASSIGN, node, assign(tks));
         }
-        else {    
+        else
+        {
             return node;
         }
     }
@@ -341,22 +371,27 @@ static Node *expr(Tokens *tks)
 // ステートメントノード
 static Node *stmt(Tokens *tks)
 {
-    if (is_match_next_token(tks, TK_BRACE_OPEN)) {
+    if (is_match_next_token(tks, TK_BRACE_OPEN))
+    {
         return multi_stmt(tks);
     }
 
     Node *node;
-    if (consume(tks, TK_RETURN)) {
+    if (consume(tks, TK_RETURN))
+    {
         node = new_node_return(expr(tks));
     }
-    else if (consume(tks, TK_STMT)) {
+    else if (consume(tks, TK_STMT))
+    {
         return new_node_empty_stmt();
     }
-    else {
+    else
+    {
         node = expr(tks);
     }
 
-    if (!consume(tks, TK_STMT)) {
+    if (!consume(tks, TK_STMT))
+    {
         error(tks, "';'で終わらないトークンです");
     }
 
@@ -368,18 +403,23 @@ static Node *multi_stmt(Tokens *tks)
 {
     Node *node = new_node_block();
 
-    if (!consume(tks, TK_BRACE_OPEN)) {
+    if (!consume(tks, TK_BRACE_OPEN))
+    {
         error(tks, "'{'で始まらないトークンです");
     }
 
-    for (;;) {
-        if (consume(tks, TK_BRACE_CLOSE)) {
+    for (;;)
+    {
+        if (consume(tks, TK_BRACE_CLOSE))
+        {
             break;
         }
-        else if (is_match_next_token(tks, TK_EOF)) {
+        else if (is_match_next_token(tks, TK_EOF))
+        {
             error(tks, "'}'で終わらないトークンです");
         }
-        else {
+        else
+        {
             vec_push(node->block_stmts, stmt(tks));
         }
     }
@@ -393,20 +433,24 @@ static Node *funcdef(Tokens *tks)
 {
     Token *tk = current_token(tks);
 
-    if (!consume(tks, TK_IDENT)) {
+    if (!consume(tks, TK_IDENT))
+    {
         error(tks, "top階層に関数が見つかりません");
     }
 
     Node *node = new_node_funcdef(tk->input);
 
-    if (!consume(tks, TK_PROPEN)) {
+    if (!consume(tks, TK_PROPEN))
+    {
         error(tks, "top階層に関数が見つかりません");
     }
 
     // 仮引数
-    while (!consume(tks, TK_PRCLOSE)) {
+    while (!consume(tks, TK_PRCLOSE))
+    {
         tk = current_token(tks);
-        if (!consume(tks, TK_IDENT)) {
+        if (!consume(tks, TK_IDENT))
+        {
             error(tks, "仮引数の宣言が不正です");
         }
         vec_push(node->args, tk->input);
@@ -423,8 +467,10 @@ Vector *program(Vector *token_list)
     Vector *code = new_vector();
 
     Tokens tokens = {.tokens = token_list, .pos = 0};
-    for (;;) {
-        if (is_match_next_token(&tokens, TK_EOF)) {
+    for (;;)
+    {
+        if (is_match_next_token(&tokens, TK_EOF))
+        {
             break;
         }
 
@@ -435,7 +481,6 @@ Vector *program(Vector *token_list)
 
     return code;
 }
-
 
 // [種類] [演算子] [結合規則]
 // 上ほど優先順位高い

@@ -16,21 +16,26 @@ int main(int argc, char **argv)
     // bool needs_dump_node_list = false;
     char *source_code = NULL;
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[1], "-test") == 0) {
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[1], "-test") == 0)
+        {
             runtest();
             return 0;
         }
-        else if (strcmp(argv[i], "-dumptoken") == 0) {
+        else if (strcmp(argv[i], "-dumptoken") == 0)
+        {
             needs_dump_token_list = true;
         }
         // else if (strcmp(argv[i], "-dumpnode") == 0) {
         //     needs_dump_node_list = true;
         // }
-        else if (source_code == NULL) {
+        else if (source_code == NULL)
+        {
             source_code = argv[i];
         }
-        else {
+        else
+        {
             // コードに相当する引数が複数ある（未定義のコマンド）
             fprintf(stderr, "引数が正しくありません\n");
             return 1;
@@ -38,14 +43,16 @@ int main(int argc, char **argv)
     }
 
     // ソースコードが見つからなかった
-    if (source_code == NULL) {
+    if (source_code == NULL)
+    {
         fprintf(stderr, "引数が正しくありません\n");
         return 1;
     }
 
     // トークナイズ
     Vector *tokens = tokenize(source_code);
-    if (needs_dump_token_list) {
+    if (needs_dump_token_list)
+    {
         dump_token_list(tokens);
     }
 
