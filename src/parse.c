@@ -89,17 +89,24 @@ static void error(Tokens *tks, const char *msg)
     exit(1);
 }
 
-// 次トークンがtyか確認し、tyの時のみトークンを一つ進める
-static int consume(Tokens *tks, int ty)
+// 次トークンがtyか確認する
+// consumeの先読み版
+static bool is_match_next_token(Tokens *tks, int ty)
 {
     Token *tk = current_token(tks);
 
-    if (tk->ty != ty) {
-        return 0;
+    return tk->ty == ty;
     }
-    tks->pos++;
 
-    return 1;
+// 次トークンがtyか確認し、tyの時のみトークンを一つ進める
+static bool consume(Tokens *tks, int ty)
+{
+    bool is_match = is_match_next_token(tks, ty);
+    if (is_match) {
+    tks->pos++;
+    }
+
+    return is_match;
 }
 
 // 末尾ノード 括弧か数値
@@ -404,9 +411,7 @@ Vector *program(Vector *token_list)
 
     Tokens tokens = {.tokens = token_list, .pos = 0};
     for (;;) {
-        Token *tk = current_token(&tokens);
-
-        if (tk->ty == TK_EOF) {
+        if (is_match_next_token(&tokens, TK_EOF)) {
             break;
         }
 
