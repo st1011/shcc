@@ -119,6 +119,7 @@ try 40 'foo(a){print_int(a); return a*2;} main(){return foo(20);}'
 try 40 'foo(a){return a*2;} main(){a=20; b=foo(a);return b;}'
 try 85 'foo(a b c){return a+b+c;} main(){a=20; b=40; c=10; d=foo(a*2 b c/2);return d;}'
 
+try 42 'main(){{} {;} ; return 42;}'
 
 echo OK
 

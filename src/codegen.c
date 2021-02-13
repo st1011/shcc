@@ -121,6 +121,10 @@ static void gen_asm_body(Node *node)
         printf("  push %d\n", node->val);
         return;
     }
+    if (node->ty == ND_STMT) {
+        // 空文なので何もしなくて良いはず
+        return;
+    }
 
     if (node->ty == ND_IDENT) {
         // ここは右辺値の識別子

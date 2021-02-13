@@ -14,6 +14,7 @@ typedef struct {
 
 static Node *expr(Tokens *tks);
 static Node *assign(Tokens *tks);
+static Node *multi_stmt(Tokens *tks);
 
 // 現在のトークンを返す
 static Token *current_token(Tokens *tks)
@@ -65,6 +66,12 @@ static Node *new_node_funccall(const char *name)
 static Node *new_node_return(Node *lhs)
 {
     return new_node(ND_RETURN, lhs, 0);
+}
+
+// 空文 ノード
+static Node *new_node_empty_stmt(void)
+{
+    return new_node(ND_STMT, 0, 0);
 }
 
 // Block ノード
@@ -334,10 +341,16 @@ static Node *expr(Tokens *tks)
 // ステートメントノード
 static Node *stmt(Tokens *tks)
 {
+    if (is_match_next_token(tks, TK_BRACE_OPEN)) {
+        return multi_stmt(tks);
+    }
+
     Node *node;
-    
     if (consume(tks, TK_RETURN)) {
         node = new_node_return(expr(tks));
+    }
+    else if (consume(tks, TK_STMT)) {
+        return new_node_empty_stmt();
     }
     else {
         node = expr(tks);
@@ -356,23 +369,23 @@ static Node *multi_stmt(Tokens *tks)
     Node *node = new_node_block();
 
     if (!consume(tks, TK_BRACE_OPEN)) {
-        error(tks, "'{'で始まらないトークンです");   
+        error(tks, "'{'で始まらないトークンです");
     }
 
     for (;;) {
-        Token *tk = current_token(tks);
-        if (tk->ty == TK_BRACE_OPEN) {
-            vec_push(node->block_stmts, multi_stmt(tks));
+        if (consume(tks, TK_BRACE_CLOSE)) {
+            break;
         }
-        else if (consume(tks, TK_BRACE_CLOSE)) {
-            vec_push(node->block_stmts, NULL);
-
-            return node;
+        else if (is_match_next_token(tks, TK_EOF)) {
+            error(tks, "'}'で終わらないトークンです");
         }
         else {
             vec_push(node->block_stmts, stmt(tks));
         }
     }
+
+    vec_push(node->block_stmts, NULL);
+    return node;
 }
 
 // 関数定義
