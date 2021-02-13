@@ -25,7 +25,7 @@ shift       = add
 add         = mul {"+" mul | "-" mul}
 mul         = cast {"*" mul | "/" mul | "%" mul}
 cast        = monomial
-monomial    = term
+monomial    = ["+" | "-"] term
 term        = "(" expr ")"
             | num
             | ident "(" {expr} ")"

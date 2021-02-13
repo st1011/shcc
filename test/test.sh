@@ -121,5 +121,7 @@ try 85 'foo(a b c){return a+b+c;} main(){a=20; b=40; c=10; d=foo(a*2 b c/2);retu
 
 try 42 'main(){{} {;} ; return 42;}'
 
+try 5 'main(){a=-5; b=+10; return a+b;}'
+
 echo OK
 

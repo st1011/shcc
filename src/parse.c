@@ -51,6 +51,13 @@ static Node *new_node_num(int val)
     return new_node_body(ND_NUM, 0, 0, val, 0);
 }
 
+// 単項"-"ノード
+static Node *new_node_negative(Node *value)
+{
+    // 0から引くアセンブリを吐くようにする
+    return new_node(ND_MINUS, new_node_num(0), value);
+}
+
 // 識別子ノード
 static Node *new_node_ident(const char *name)
 {
@@ -173,9 +180,17 @@ static Node *term(Tokens *tks)
 // ++ -- ! ~ +-（符号） * & sizeof()
 static Node *monomial(Tokens *tks)
 {
-    Node *node = term(tks);
+    if (consume(tks, TK_PLUS))
+    {
+        return term(tks);
+    }
+    else if (consume(tks, TK_MINUS))
+    {
+        Node *node = term(tks);
+        return new_node_negative(node);
+    }
 
-    return node;
+    return term(tks);
 }
 
 // キャスト演算子
