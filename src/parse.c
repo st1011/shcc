@@ -375,8 +375,8 @@ static Node *multi_stmt(Tokens *tks)
     }
 }
 
-// globalレベルのノード
-static Node *globals(Tokens *tks)
+// 関数定義
+static Node *funcdef(Tokens *tks)
 {
     Token *tk = current_token(tks);
 
@@ -415,7 +415,7 @@ Vector *program(Vector *token_list)
             break;
         }
 
-        vec_push(code, globals(&tokens));
+        vec_push(code, funcdef(&tokens));
     }
 
     vec_push(code, NULL);
