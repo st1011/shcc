@@ -23,7 +23,7 @@ try() {
 	if [ "$actual" = "$expected" ]; then
 		echo "$input => $actual"
 	else
-		echo "$expected expected, but got $actual"
+		echo "$expected expected, but got $actual (L$BASH_LINENO)"
 		exit 1
 	fi
 }
