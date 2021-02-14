@@ -129,6 +129,7 @@ static void gen_asm_lval(Node *node)
 }
 
 // 式のアセンブリ出力
+// 式の結果をpush
 static void gen_asm_expr(Node *node)
 {
     switch (node->ty)
@@ -314,10 +315,6 @@ static void gen_asm_stmt(Node *node)
         {
             Node *stmt = (Node *)node->block_stmts->data[j];
             gen_asm_stmt(stmt);
-
-            // 式の評価結果としてpushされた値が一つあるので
-            // スタックがあふれないようにpopする
-            printf("  pop rax\t\t# remove before expr result\n");
         }
 
         // 無理矢理ブロック突入時の変数状態に戻す
@@ -358,6 +355,8 @@ static void gen_asm_stmt(Node *node)
         if (node->initializer)
         {
             gen_asm_expr(node->initializer);
+            // 式の評価結果としてpushされた値が一つあるが、使わないのでここでpopする
+            printf("  pop rax\t\t# remove before expr result\n");
         }
         printf(".Lbegin%d:\n", label_no);
         if (node->condition)
@@ -372,6 +371,8 @@ static void gen_asm_stmt(Node *node)
         if (node->loopexpr)
         {
             gen_asm_expr(node->loopexpr);
+            // 式の評価結果としてpushされた値が一つあるが、使わないのでここでpopする
+            printf("  pop rax\t\t# remove before expr result\n");
         }
         printf("  jmp .Lbegin%d\n", label_no);
         printf(".Lend%d:\n", label_no);
@@ -387,6 +388,8 @@ static void gen_asm_stmt(Node *node)
     default:
     {
         gen_asm_expr(node);
+        // 式の評価結果としてpushされた値が一つあるが、使わないのでここでpopする
+        printf("  pop rax\t\t# remove before expr result\n");
         break;
     }
     }
