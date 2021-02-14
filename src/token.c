@@ -24,6 +24,23 @@ static struct
     {TK_MOD_ASSIGN, "%="},
 };
 
+// 1文字の演算子
+static char one_operation_list[] = {
+    TK_PLUS,
+    TK_MINUS,
+    TK_MUL,
+    TK_DIV,
+    TK_MOD,
+    TK_PROPEN,
+    TK_PRCLOSE,
+    TK_ASSIGN,
+    TK_LESS,
+    TK_GREATER,
+    TK_BRACE_OPEN,
+    TK_BRACE_CLOSE,
+    TK_STMT,
+};
+
 // 識別子の先頭になり得る文字か？
 // [a-zA-Z_]
 static bool is_idnet_head_char(char ch)
@@ -41,8 +58,15 @@ static bool is_idnet_char(char ch)
 // 一文字式か？
 static bool is_oneop(char ch)
 {
-    // 数値以外で1文字式
-    return ch == TK_PLUS || ch == TK_MINUS || ch == TK_MUL || ch == TK_DIV || ch == TK_MOD || ch == TK_PROPEN || ch == TK_PRCLOSE || ch == TK_ASSIGN || ch == TK_LESS || ch == TK_GREATER || ch == ND_BRACE_OPEN || ch == ND_BRACE_CLOSE || ch == TK_STMT;
+    for (int i = 0; i < NUMOF(one_operation_list); i++)
+    {
+        if (ch == one_operation_list[i])
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // 予約後のマップを生成・取得
