@@ -80,7 +80,7 @@ void dump_node_list(Vector *code)
 
         if (node->ty == ND_FUNCDEF)
         {
-            dump_node_block(node->func_block->block_stmts);
+            dump_node_block(node->func_stmts);
         }
     }
 

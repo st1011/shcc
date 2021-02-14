@@ -351,7 +351,7 @@ void gen_asm(Vector *code)
         vars = new_map();
 
         gen_asm_func_head(funcdef);
-        gen_asm_block(funcdef->func_block->block_stmts);
+        gen_asm_block(funcdef->func_stmts);
         gen_asm_func_tail();
     }
 

@@ -34,7 +34,10 @@ static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const c
     node->name = name;
     node->args = new_vector();
     node->block_stmts = new_vector();
-    node->func_block = 0;
+    // 関数のステートメントリストへ直接Addされることはなく
+    // 他で生成されたvectorを代入するのみ。
+    // よってここで生成はしない。
+    node->func_stmts = 0;
 
     return node;
 }
@@ -465,7 +468,7 @@ static Node *funcdef(Tokens *tks)
         vec_push(node->args, tk->input);
     }
     // 関数定義本体（ブレース内）
-    node->func_block = multi_stmt(tks);
+    node->func_stmts = multi_stmt(tks)->block_stmts;
 
     return node;
 }
