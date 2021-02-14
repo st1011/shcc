@@ -401,6 +401,32 @@ static Node *assign(Tokens *tks)
     {
         node = new_node(ND_ASSIGN, node, assign(tks));
     }
+    else if (consume(tks, TK_ADD_ASSIGN))
+    {
+        // [a += b;] = [a = a + b;]
+        Node *expr = new_node(ND_PLUS, node, assign(tks));
+        node = new_node(ND_ASSIGN, node, expr);
+    }
+    else if (consume(tks, TK_SUB_ASSIGN))
+    {
+        Node *expr = new_node(ND_MINUS, node, assign(tks));
+        node = new_node(ND_ASSIGN, node, expr);
+    }
+    else if (consume(tks, TK_MUL_ASSIGN))
+    {
+        Node *expr = new_node(ND_MUL, node, assign(tks));
+        node = new_node(ND_ASSIGN, node, expr);
+    }
+    else if (consume(tks, TK_DIV_ASSIGN))
+    {
+        Node *expr = new_node(ND_DIV, node, assign(tks));
+        node = new_node(ND_ASSIGN, node, expr);
+    }
+    else if (consume(tks, TK_MOD_ASSIGN))
+    {
+        Node *expr = new_node(ND_MOD, node, assign(tks));
+        node = new_node(ND_ASSIGN, node, expr);
+    }
 
     return node;
 }

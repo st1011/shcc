@@ -148,5 +148,11 @@ try 42 'main(){i=0; while (i) {i=i+1; return 0;} return 42;}'
 try 42 'main(){i=1; while (i) {i=i+1; return 42;} return 0;}'
 try 42 'main(){i=0; while (1) {i=i+1; if (i>=42) {return i;}} return 0;}'
 
+try 42 'main(){a=10; b=3; a+=b; return a + 29;}'
+try 42 'main(){a=10; b=3; a-=b; return a + 35;}'
+try 42 'main(){a=10; b=3; a*=b; return a + 12;}'
+try 42 'main(){a=10; b=3; a/=b; return a + 39;}'
+try 42 'main(){a=10; b=3; a%=b; return a + 41;}'
+
 echo OK
 

@@ -31,6 +31,11 @@ typedef enum
     TK_NEQ,         // !=
     TK_LESS_EQ,     // <=
     TK_GREATER_EQ,  // >=
+    TK_ADD_ASSIGN,  // +=
+    TK_SUB_ASSIGN,  // -=
+    TK_MUL_ASSIGN,  // *=
+    TK_DIV_ASSIGN,  // /=
+    TK_MOD_ASSIGN,  // %=
     TK_EOF,         // 終端
 } TokenType_t;
 
@@ -63,6 +68,11 @@ typedef enum
     ND_NEQ,         // !=
     ND_LESS_EQ,     // <=
     ND_GREATER_EQ,  // >=
+    ND_ADD_ASSIGN,  // +=
+    ND_SUB_ASSIGN,  // -=
+    ND_MUL_ASSIGN,  // *=
+    ND_DIV_ASSIGN,  // /=
+    ND_MOD_ASSIGN,  // %=
 
 } NodeType_t;
 

@@ -14,7 +14,13 @@ stmt        = multi_stmt
             | ";"
             | expr ";"
 expr        = assign
-assign      = conditional ["=" assign]
+assign      = conditional
+            | conditional "=" assign
+            | conditional "+=" assign
+            | conditional "-=" assign
+            | conditional "*=" assign
+            | conditional "/=" assign
+            | conditional "%=" assign
 conditional = logical_or
 logical_or  = logical_and
 logical_and = bit_or

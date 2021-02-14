@@ -17,6 +17,11 @@ static struct
     {TK_NEQ, "!="},
     {TK_LESS_EQ, "<="},
     {TK_GREATER_EQ, ">="},
+    {TK_ADD_ASSIGN, "+="},
+    {TK_SUB_ASSIGN, "-="},
+    {TK_MUL_ASSIGN, "*="},
+    {TK_DIV_ASSIGN, "/="},
+    {TK_MOD_ASSIGN, "%="},
 };
 
 // 識別子の先頭になり得る文字か？
