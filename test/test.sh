@@ -154,5 +154,10 @@ try 42 'main(){a=10; b=3; a*=b; return a + 12;}'
 try 42 'main(){a=10; b=3; a/=b; return a + 39;}'
 try 42 'main(){a=10; b=3; a%=b; return a + 41;}'
 
+try 42 'main(){a=42; b=&a; return *b;}'
+# 変数は8Bアラインされている(というか8Bしかない)
+# dは&bを指しているはず(配列がないので気持ち悪いがこんな感じのテストになる)
+try 42 'main(){a=41; b=42; c=43; d=&a-8; return *d;}'
+
 echo OK
 

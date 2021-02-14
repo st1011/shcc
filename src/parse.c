@@ -225,6 +225,14 @@ static Node *monomial(Tokens *tks)
         Node *node = term(tks);
         return new_node_negative(node);
     }
+    else if (consume(tks, TK_ADDR))
+    {
+        return new_node(ND_ADDR, monomial(tks), NULL);
+    }
+    else if (consume(tks, TK_DEREF))
+    {
+        return new_node(ND_DEREF, monomial(tks), NULL);
+    }
 
     return term(tks);
 }

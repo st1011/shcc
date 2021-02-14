@@ -18,6 +18,8 @@ typedef enum
     TK_GREATER = '>',
     TK_BRACE_OPEN = '{',
     TK_BRACE_CLOSE = '}',
+    TK_ADDR = '&',
+    TK_DEREF = '*',
     TK_STMT = ';',
 
     TK_NUM = 0x100, // 整数
@@ -73,6 +75,8 @@ typedef enum
     ND_MUL_ASSIGN,  // *=
     ND_DIV_ASSIGN,  // /=
     ND_MOD_ASSIGN,  // %=
+    ND_ADDR,        // &
+    ND_DEREF,       // *
 
 } NodeType_t;
 

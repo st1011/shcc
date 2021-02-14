@@ -38,6 +38,8 @@ static char one_operation_list[] = {
     TK_GREATER,
     TK_BRACE_OPEN,
     TK_BRACE_CLOSE,
+    TK_ADDR,
+    TK_DEREF,
     TK_STMT,
 };
 

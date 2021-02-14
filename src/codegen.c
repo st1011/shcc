@@ -205,6 +205,19 @@ static void gen_asm_expr(Node *node)
         printf("  push rax\n");
         return;
     }
+    case ND_ADDR:
+    {
+        gen_asm_lval(node->lhs);
+        return;
+    }
+    case ND_DEREF:
+    {
+        gen_asm_expr(node->lhs);
+        printf("  pop rax\n");
+        printf("  mov rax, [rax]\n");
+        printf("  push rax\n");
+        return;
+    }
     default:
     {
         break;

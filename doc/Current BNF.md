@@ -35,6 +35,8 @@ add         = mul {"+" mul | "-" mul}
 mul         = cast {"*" mul | "/" mul | "%" mul}
 cast        = monomial
 monomial    = ["+" | "-"] term
+            | "&" monomial
+            | "*" monomial
 term        = "(" expr ")"
             | num
             | ident "(" {expr} ")"
