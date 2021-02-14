@@ -378,6 +378,19 @@ static void gen_asm_stmt(Node *node)
         printf(".Lend%d:\n", label_no);
         return;
     }
+    case ND_WHILE:
+    {
+        int label_no = global_label_no++;
+        printf(".Lbegin%d:\n", label_no);
+        gen_asm_expr(node->condition);
+        printf("  pop rax\n");
+        printf("  cmp rax, 0\n");
+        printf("  je .Lend%d\n", label_no);
+        gen_asm_stmt(node->then);
+        printf("  jmp .Lbegin%d\n", label_no);
+        printf(".Lend%d:\n", label_no);
+        return;
+    }
     case ND_STMT:
     {
         // 空文なので何もしなくて良いはずだが、何もしないとここがきちんと処理されているか分からないので

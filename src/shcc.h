@@ -26,6 +26,7 @@ typedef enum
     TK_IF,          // if
     TK_ELSE,        // else
     TK_FOR,         // for
+    TK_WHILE,       // while
     TK_EQ,          // ==
     TK_NEQ,         // !=
     TK_LESS_EQ,     // <=
@@ -57,6 +58,7 @@ typedef enum
     ND_IF,          // if
     ND_ELSE,        // else
     ND_FOR,         // for
+    ND_WHILE,       // while
     ND_EQ,          // ==
     ND_NEQ,         // !=
     ND_LESS_EQ,     // <=
@@ -98,8 +100,8 @@ typedef struct Node
     Vector *args;             // ND_CALLの引数
     Vector *block_stmts;      // ND_BLOCKを構成する式群
     struct Node *func_body;   // ND_FUNCDEFの定義となるブロック
-    struct Node *condition;   // if / for の条件式
-    struct Node *then;        // if / for で条件を満たすときに実行される文
+    struct Node *condition;   // if / for / while の条件式
+    struct Node *then;        // if / for / while で条件を満たすときに実行される文
     struct Node *elsethen;    // if-else で条件を満たさないときに実行される文
     struct Node *initializer; // for の初期化処理
     struct Node *loopexpr;    // for のループ終了時の処理

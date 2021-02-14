@@ -49,6 +49,7 @@ static Map *get_reserved_words(void)
     map_puti(reserved_words, "if", TK_IF);
     map_puti(reserved_words, "else", TK_ELSE);
     map_puti(reserved_words, "for", TK_FOR);
+    map_puti(reserved_words, "while", TK_WHILE);
 
     return reserved_words;
 }

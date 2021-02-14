@@ -122,6 +122,15 @@ static Node *new_node_for(Node *initializer, Node *condition, Node *loopexpr, No
     return node;
 }
 
+// whileノード
+static Node *new_node_while(Node *condition, Node *then)
+{
+    Node *node = new_node(ND_WHILE, 0, 0);
+    node->condition = condition;
+    node->then = then;
+    return node;
+}
+
 // トークン解析失敗エラー
 static void error(Tokens *tks, const char *msg)
 {
@@ -478,6 +487,28 @@ static Node *stmt_for(Tokens *tks)
     return new_node_for(initializer, condition, loopexpr, then);
 }
 
+// while文
+static Node *stmt_while(Tokens *tks)
+{
+    // ここに来る時点ではWHILEトークンは消費済み
+
+    if (!consume(tks, TK_PROPEN))
+    {
+        error(tks, "while文には'('が必要です");
+    }
+
+    Node *condition = expr(tks);
+
+    if (!consume(tks, TK_PRCLOSE))
+    {
+        error(tks, "while文には')'が必要です");
+    }
+
+    Node *then = stmt(tks);
+
+    return new_node_while(condition, then);
+}
+
 // ステートメントノード
 static Node *stmt(Tokens *tks)
 {
@@ -499,6 +530,11 @@ static Node *stmt(Tokens *tks)
     else if (consume(tks, TK_FOR))
     {
         node = stmt_for(tks);
+        return node;
+    }
+    else if (consume(tks, TK_WHILE))
+    {
+        node = stmt_while(tks);
         return node;
     }
     else if (consume(tks, TK_STMT))
