@@ -48,7 +48,7 @@ typedef enum
     ND_NUM = 0x100, // 整数
     ND_IDENT,       // 識別子
     ND_CALL,        // 関数呼び出し
-    ND_FUNCTION,    // 関数定義
+    ND_FUNCDEF,     // 関数定義
     ND_BLOCK,       // 複文（{}）
     ND_RETURN,      // return
     ND_EQ,          // ==

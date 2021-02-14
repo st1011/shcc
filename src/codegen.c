@@ -344,6 +344,7 @@ void gen_asm(Vector *code)
     for (int i = 0; code->data[i]; i++)
     {
         Node *funcdef = code->data[i];
+        assert(funcdef->ty == ND_FUNCDEF);
 
         // 関数ごとにスタックや変数一覧はクリアされる
         stack_offset = 0;

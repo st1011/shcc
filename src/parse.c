@@ -91,8 +91,8 @@ static Node *new_node_block(void)
 // 関数定義ノード
 static Node *new_node_funcdef(const char *name)
 {
-    // TODO CALLでよいのか？
-    return new_node_body(ND_CALL, 0, 0, 0, name);
+    return new_node_body(ND_FUNCDEF, 0, 0, 0, name);
+}
 }
 
 // トークン解析失敗エラー
