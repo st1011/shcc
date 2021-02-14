@@ -361,18 +361,12 @@ static Node *conditional(Tokens *tks)
 static Node *assign(Tokens *tks)
 {
     Node *node = conditional(tks);
-
-    for (;;)
+    if (consume(tks, TK_ASSIGN))
     {
-        if (consume(tks, TK_ASSIGN))
-        {
-            node = new_node(ND_ASSIGN, node, assign(tks));
-        }
-        else
-        {
-            return node;
-        }
+        node = new_node(ND_ASSIGN, node, assign(tks));
     }
+
+    return node;
 }
 
 // 一つの式

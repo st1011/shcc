@@ -59,6 +59,10 @@ try 12 'main(){a=20;a=10;z=12;y=30;x=22;z*a+y-x; return z;}'
 try 20 'main(){a=20;return a;a=10;z=12;y=30;x=22;z*a+y-x;}'
 try 20 'main(){a=20;return a;a=10;return a;z=12;y=30;x=22;z*a+y-x;}'
 
+try 8 'main(){a;b;c;d;a=b=c=d=2; return a+b+c+d;}'
+# 現時点の構文なら`main(){a=b=2;}'のようなコードも許容されるはずだが、
+# アセンブリ生成の都合上スタックがずれてしまうのでこれはNG
+
 try 10 'main(){abc = 10; return abc;}'
 try 10 'main(){zyx = 10; return zyx;}'
 try 10 'main(){foobar = 10; return foobar;}'

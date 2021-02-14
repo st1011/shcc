@@ -113,10 +113,11 @@ static void gen_asm_lval(Node *node)
         offset = stack_offset;
         map_puti(vars, node->name, stack_offset);
 
-        printf("  sub rsp, %d\t\t# stack evacuation\n", stack_unit); // スタック待避
+        printf("  sub rsp, %d\t\t# new variable\n", stack_unit); // スタック待避
         stack_offset += stack_unit;
     }
 
+    printf("  #%s = [RBP-%d]\n", node->name, offset);
     printf("  mov rax, rbp\n");
     printf("  sub rax, %d\n", offset);
     printf("  push rax\t\t# var addr\n");
