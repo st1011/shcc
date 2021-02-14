@@ -99,7 +99,7 @@ static Node *new_node_funcdef(const char *name)
     return new_node_body(ND_FUNCDEF, 0, 0, 0, name);
 }
 
-// if-else定義ノード
+// if-elseノード
 static Node *new_node_ifelse(Node *condition, Node *then, Node *elsethen)
 {
     Node *node = new_node(ND_IF, 0, 0);
@@ -391,6 +391,7 @@ static Node *expr(Tokens *tks)
     return node;
 }
 
+// if文
 static Node *stmt_if(Tokens *tks)
 {
     // ここに来る時点ではIFトークンは消費済み
