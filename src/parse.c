@@ -15,6 +15,7 @@ typedef struct
 
 static Node *expr(Tokens *tks);
 static Node *assign(Tokens *tks);
+static Node *stmt(Tokens *tks);
 static Node *multi_stmt(Tokens *tks);
 
 // 現在のトークンを返す
@@ -34,10 +35,11 @@ static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const c
     node->name = name;
     node->args = new_vector();
     node->block_stmts = new_vector();
-    // 関数のステートメントリストへ直接Addされることはなく
-    // 他で生成されたvectorを代入するのみ。
-    // よってここで生成はしない。
-    node->func_stmts = 0;
+    node->func_body = 0;
+
+    node->condition = 0;
+    node->then = 0;
+    node->elsethen = 0;
 
     return node;
 }
@@ -96,6 +98,15 @@ static Node *new_node_funcdef(const char *name)
 {
     return new_node_body(ND_FUNCDEF, 0, 0, 0, name);
 }
+
+// if-else定義ノード
+static Node *new_node_ifelse(Node *condition, Node *then, Node *elsethen)
+{
+    Node *node = new_node(ND_IF, 0, 0);
+    node->condition = condition;
+    node->then = then;
+    node->elsethen = elsethen;
+    return node;
 }
 
 // トークン解析失敗エラー
@@ -380,6 +391,33 @@ static Node *expr(Tokens *tks)
     return node;
 }
 
+static Node *stmt_if(Tokens *tks)
+{
+    // ここに来る時点ではIFトークンは消費済み
+
+    if (!consume(tks, TK_PROPEN))
+    {
+        error(tks, "if文には'('が必要です");
+    }
+
+    Node *condition = expr(tks);
+
+    if (!consume(tks, TK_PRCLOSE))
+    {
+        error(tks, "if文には')'が必要です");
+    }
+
+    Node *then = stmt(tks);
+
+    Node *elsethen = NULL;
+    if (consume(tks, TK_ELSE))
+    {
+        elsethen = stmt(tks);
+    }
+
+    return new_node_ifelse(condition, then, elsethen);
+}
+
 // ステートメントノード
 static Node *stmt(Tokens *tks)
 {
@@ -392,6 +430,11 @@ static Node *stmt(Tokens *tks)
     if (consume(tks, TK_RETURN))
     {
         node = new_node_return(expr(tks));
+    }
+    else if (consume(tks, TK_IF))
+    {
+        node = stmt_if(tks);
+        return node;
     }
     else if (consume(tks, TK_STMT))
     {
@@ -468,7 +511,7 @@ static Node *funcdef(Tokens *tks)
         vec_push(node->args, tk->input);
     }
     // 関数定義本体（ブレース内）
-    node->func_stmts = multi_stmt(tks)->block_stmts;
+    node->func_body = multi_stmt(tks);
 
     return node;
 }

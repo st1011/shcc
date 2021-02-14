@@ -8,6 +8,9 @@
 
 #include "shcc.h"
 
+static void gen_asm_expr(Node *node);
+static void gen_asm_stmt(Node *node);
+
 static Map *vars = 0;
 static int stack_offset = 0;
 
@@ -123,40 +126,17 @@ static void gen_asm_lval(Node *node)
     printf("  push rax\t\t# var addr\n");
 }
 
-// アセンブリ生成本体
-static void gen_asm_body(Node *node)
+// 式のアセンブリ出力
+static void gen_asm_expr(Node *node)
 {
-    if (node->ty == ND_RETURN)
+    switch (node->ty)
     {
-        gen_asm_body(node->lhs);
-        printf("  pop rax\n");
-        gen_asm_func_tail();
-        return;
-    }
-    if (node->ty == ND_NUM)
+    case ND_NUM:
     {
         printf("  push %d\n", node->val);
         return;
     }
-    if (node->ty == ND_STMT)
-    {
-        // 空文なので何もしなくて良いはずだが、何もしないとここがきちんと処理されているか分からないので
-        // nopを出力する
-        printf("  nop\n");
-        return;
-    }
-
-    if (node->ty == ND_IDENT)
-    {
-        // ここは右辺値の識別子
-        // 一度左辺値としてpushした値をpopして使う
-        gen_asm_lval(node);
-        printf("  pop rax\n");
-        printf("  mov rax, [rax]\n");
-        printf("  push rax\n");
-        return;
-    }
-    if (node->ty == ND_CALL)
+    case ND_CALL:
     {
         // 関数呼び出し
         // 今はとりあえず上限までレジスタ格納しておく
@@ -173,7 +153,7 @@ static void gen_asm_body(Node *node)
         // 一度すべての計算結果をスタックに積む
         for (int i = (int)node->args->len - 1; i >= 0; i--)
         {
-            gen_asm_body(node->args->data[i]);
+            gen_asm_expr(node->args->data[i]);
         }
         // スタックから取り出しながら引数レジスタに格納する
         for (int i = 0; i < node->args->len; i++)
@@ -201,21 +181,35 @@ static void gen_asm_body(Node *node)
         printf("  push rax\n");
         return;
     }
-
-    if (node->ty == ND_ASSIGN)
+    case ND_ASSIGN:
     {
         // 代入式なら、必ず左辺は変数
         gen_asm_lval(node->lhs);
-        gen_asm_body(node->rhs);
+        gen_asm_expr(node->rhs);
         printf("  pop rdi\n");
         printf("  pop rax\n");
         printf("  mov [rax], rdi\n");
         printf("  push rdi\n");
         return;
     }
+    case ND_IDENT:
+    {
+        // ここは右辺値の識別子
+        // 一度左辺値としてpushした値をpopして使う
+        gen_asm_lval(node);
+        printf("  pop rax\n");
+        printf("  mov rax, [rax]\n");
+        printf("  push rax\n");
+        return;
+    }
+    default:
+    {
+        break;
+    }
+    }
 
-    gen_asm_body(node->lhs);
-    gen_asm_body(node->rhs);
+    gen_asm_expr(node->lhs);
+    gen_asm_expr(node->rhs);
 
     printf("  pop rdi\n"); // 右辺の値
     printf("  pop rax\n"); // 左辺の値
@@ -295,7 +289,6 @@ static void gen_asm_body(Node *node)
         printf("  movzb rax, al\n");
         break;
     }
-
     default:
     {
         error("未対応のノード形式です");
@@ -306,32 +299,50 @@ static void gen_asm_body(Node *node)
     printf("  push rax\n");
 }
 
-// block内のアセンブリ出力
-static void gen_asm_block(Vector *block_stmts)
+// 文のアセンブリ出力
+static void gen_asm_stmt(Node *node)
 {
-    int len = vars->keys->len;
-
-    for (int j = 0; block_stmts->data[j]; j++)
+    switch (node->ty)
     {
-        Node *node = (Node *)block_stmts->data[j];
+    case ND_BLOCK:
+    {
+        int len = vars->keys->len;
 
-        if (node->ty == ND_BLOCK)
+        for (int j = 0; node->block_stmts->data[j]; j++)
         {
-            gen_asm_block((Vector *)node->block_stmts);
-        }
-        else
-        {
-            gen_asm_body(node);
+            Node *stmt = (Node *)node->block_stmts->data[j];
+            gen_asm_stmt(stmt);
 
             // 式の評価結果としてpushされた値が一つあるので
             // スタックがあふれないようにpopする
             printf("  pop rax\t\t# remove before expr result\n");
         }
-    }
 
-    // 無理矢理ブロック突入時の変数状態に戻す
-    vars->keys->len = len;
-    vars->vals->len = len;
+        // 無理矢理ブロック突入時の変数状態に戻す
+        vars->keys->len = len;
+        vars->vals->len = len;
+        return;
+    }
+    case ND_RETURN:
+    {
+        gen_asm_expr(node->lhs);
+        printf("  pop rax\n");
+        gen_asm_func_tail();
+        return;
+    }
+    case ND_STMT:
+    {
+        // 空文なので何もしなくて良いはずだが、何もしないとここがきちんと処理されているか分からないので
+        // nopを出力する
+        printf("  nop\n");
+        return;
+    }
+    default:
+    {
+        gen_asm_expr(node);
+        break;
+    }
+    }
 }
 
 // アセンブリ出力
@@ -351,7 +362,7 @@ void gen_asm(Vector *code)
         vars = new_map();
 
         gen_asm_func_head(funcdef);
-        gen_asm_block(funcdef->func_stmts);
+        gen_asm_stmt(funcdef->func_body);
         gen_asm_func_tail();
     }
 
