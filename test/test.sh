@@ -135,5 +135,8 @@ try 42 'main(){if(0) return 0; else return 42; return 1;}'
 try 42 'main(){if(0) {return 0;} else {return 42;} return 1;}'
 try 42 'main(){if(0) {return 0;} else if (0) {return 0;} else { if (1) return 42;} return 1;}'
 
+# 5!=120
+try 120 'fact(n) { if (n==0) {return 1;} else { return fact(n-1) * n;}}main() {f=fact(5); return f;}'
+
 echo OK
 
