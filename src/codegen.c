@@ -140,7 +140,9 @@ static void gen_asm_body(Node *node)
     }
     if (node->ty == ND_STMT)
     {
-        // 空文なので何もしなくて良いはず
+        // 空文なので何もしなくて良いはずだが、何もしないとここがきちんと処理されているか分からないので
+        // nopを出力する
+        printf("  nop\n");
         return;
     }
 
