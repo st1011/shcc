@@ -105,10 +105,14 @@ void *map_get(const Map *map, const char *key);
 int map_geti(const Map *map, const char *key);
 
 Vector *tokenize(char *p);
-void dump_token_list(Vector *token_list);
 
 Vector *program(Vector *token_list);
 
 void gen_asm(Vector *code);
+
+// ダンプ関係
+void initialize_dump_env(void);
+void dump_token_list(Vector *token_list);
+void dump_node_list(Vector *code);
 
 #endif // ifndef SHCC_H_

@@ -13,7 +13,7 @@ void runtest(void);
 int main(int argc, char **argv)
 {
     bool needs_dump_token_list = false;
-    // bool needs_dump_node_list = false;
+    bool needs_dump_node_list = false;
     char *source_code = NULL;
 
     for (int i = 1; i < argc; i++)
@@ -27,9 +27,10 @@ int main(int argc, char **argv)
         {
             needs_dump_token_list = true;
         }
-        // else if (strcmp(argv[i], "-dumpnode") == 0) {
-        //     needs_dump_node_list = true;
-        // }
+        else if (strcmp(argv[i], "-dumpnode") == 0)
+        {
+            needs_dump_node_list = true;
+        }
         else if (source_code == NULL)
         {
             source_code = argv[i];
@@ -49,6 +50,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    if (needs_dump_token_list || needs_dump_node_list)
+    {
+        initialize_dump_env();
+    }
+
     // トークナイズ
     Vector *tokens = tokenize(source_code);
     if (needs_dump_token_list)
@@ -58,9 +64,10 @@ int main(int argc, char **argv)
 
     // パース
     Vector *code = program(tokens);
-    // if (needs_dump_node_list) {
-    //     dump_node_list(code);
-    // }
+    if (needs_dump_node_list)
+    {
+        dump_node_list(code);
+    }
 
     // アセンブリ出力
     gen_asm(code);

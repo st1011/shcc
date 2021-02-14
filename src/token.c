@@ -19,54 +19,6 @@ static struct
     {TK_GREATER_EQ, ">="},
 };
 
-// トークン一覧の出力
-void dump_token_list(Vector *token_list)
-{
-    printf("# tokens: ");
-
-    for (int i = 0; i < token_list->len; i++)
-    {
-        Token *tk = token_list->data[i];
-
-        switch (tk->ty)
-        {
-        case TK_NUM:
-            printf("NUM");
-            break;
-        case TK_IDENT:
-            printf("ID");
-            break;
-        case TK_RETURN:
-            printf("RET");
-            break;
-        case TK_EQ:
-            printf("==");
-            break;
-        case TK_NEQ:
-            printf("!=");
-            break;
-        case TK_LESS_EQ:
-            printf("<=");
-            break;
-        case TK_GREATER_EQ:
-            printf(">=");
-            break;
-        case TK_EOF:
-            printf("EOF");
-            break;
-        default:
-        {
-            printf("%c", tk->ty);
-            break;
-        }
-        }
-
-        printf(" ");
-    }
-
-    printf("\n");
-}
-
 // 識別子の先頭になり得る文字か？
 // [a-zA-Z_]
 static bool is_idnet_head_char(char ch)

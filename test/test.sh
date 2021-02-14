@@ -15,7 +15,7 @@ try() {
 	expected="$1"
 	input="$2"
 
-	../bin/shcc "$input" > testout.s
+	../bin/shcc -dumptoken -dumpnode "$input" > testout.s
 	gcc -g -o testout testout.s exfunc.o
 	./testout
 	actual="$?"
