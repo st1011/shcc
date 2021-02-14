@@ -23,6 +23,8 @@ typedef enum
     TK_NUM = 0x100, // 整数
     TK_IDENT,       // 識別子
     TK_RETURN,      // return
+    TK_IF,          // if
+    TK_ELSE,        // else
     TK_EQ,          // ==
     TK_NEQ,         // !=
     TK_LESS_EQ,     // <=
@@ -51,6 +53,8 @@ typedef enum
     ND_FUNCDEF,     // 関数定義
     ND_BLOCK,       // 複文（{}）
     ND_RETURN,      // return
+    ND_IF,          // if
+    ND_ELSE,        // else
     ND_EQ,          // ==
     ND_NEQ,         // !=
     ND_LESS_EQ,     // <=
@@ -92,6 +96,9 @@ typedef struct Node
     Vector *args;            // ND_CALLの引数
     Vector *block_stmts;     // ND_BLOCKを構成する式群
     struct Node *func_body;  // ND_FUNCDEFの定義となるブロック
+    struct Node *condition;  // ND_IF の条件式
+    struct Node *then;       // ND_IF で実行されるステートメント
+    struct Node *elsethen;   // ND_ELSE で実行されるステートメント
 } Node;
 
 Vector *new_vector(void);

@@ -13,6 +13,8 @@ static void gen_asm_stmt(Node *node);
 
 static Map *vars = 0;
 static int stack_offset = 0;
+// 条件分岐などで連番を作成するために使用する
+static int global_label_no = 0;
 
 static const int stack_unit = 8;
 
@@ -328,6 +330,26 @@ static void gen_asm_stmt(Node *node)
         gen_asm_expr(node->lhs);
         printf("  pop rax\n");
         gen_asm_func_tail();
+        return;
+    }
+    case ND_IF:
+    {
+        int label_no = global_label_no++;
+        gen_asm_expr(node->condition);
+        printf("  pop rax\n");
+        printf("  cmp rax, 0\n");
+
+        // elseが無くてもラベルを作っている
+        // こちらの方がコードはスマートになる
+        printf("  je .Lelse%d\n", label_no);
+        gen_asm_stmt(node->then);
+        printf("  jmp .Lend%d\n", label_no);
+        printf(".Lelse%d:\n", label_no);
+        if (node->elsethen)
+        {
+            gen_asm_stmt(node->elsethen);
+        }
+        printf(".Lend%d:\n", label_no);
         return;
     }
     case ND_STMT:

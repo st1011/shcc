@@ -7,6 +7,7 @@ global      = funcdef*
 funcef      = ident "(" ")" multi_stmt
 multi_stmt  = "{" {stmt} "}"
 stmt        = multi_stmt
+            | "if" "(" expr ")" stmt ["else" stmt]
             | "return" [expr] ";"
             | ";"
             | expr ";"
