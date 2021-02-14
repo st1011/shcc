@@ -91,7 +91,7 @@ typedef struct Node
     const char *name;        // ND_IDENTの場合の名前
     Vector *args;            // ND_CALLの引数
     Vector *block_stmts;     // ND_BLOCKを構成する式群
-    struct Node *func_body;  // ND_FUNCTIONの定義となるブロック
+    struct Node *func_body;  // ND_FUNCDEFの定義となるブロック
 } Node;
 
 Vector *new_vector(void);
