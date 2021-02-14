@@ -8,6 +8,7 @@ funcef      = ident "(" ")" multi_stmt
 multi_stmt  = "{" {stmt} "}"
 stmt        = multi_stmt
             | "if" "(" expr ")" stmt ["else" stmt]
+            | "for" "(" [expr] ";" [expr] ";" [expr] ")" stmt
             | "return" [expr] ";"
             | ";"
             | expr ";"

@@ -352,6 +352,31 @@ static void gen_asm_stmt(Node *node)
         printf(".Lend%d:\n", label_no);
         return;
     }
+    case ND_FOR:
+    {
+        int label_no = global_label_no++;
+        if (node->initializer)
+        {
+            gen_asm_expr(node->initializer);
+        }
+        printf(".Lbegin%d:\n", label_no);
+        if (node->condition)
+        {
+            gen_asm_expr(node->condition);
+            printf("  pop rax\n");
+            printf("  cmp rax, 0\n");
+            printf("  je .Lend%d\n", label_no);
+        }
+        // thenが無いとパースで失敗しているはず
+        gen_asm_stmt(node->then);
+        if (node->loopexpr)
+        {
+            gen_asm_expr(node->loopexpr);
+        }
+        printf("  jmp .Lbegin%d\n", label_no);
+        printf(".Lend%d:\n", label_no);
+        return;
+    }
     case ND_STMT:
     {
         // 空文なので何もしなくて良いはずだが、何もしないとここがきちんと処理されているか分からないので

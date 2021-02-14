@@ -138,5 +138,10 @@ try 42 'main(){if(0) {return 0;} else if (0) {return 0;} else { if (1) return 42
 # 5!=120
 try 120 'fact(n) { if (n==0) {return 1;} else { return fact(n-1) * n;}}main() {f=fact(5); return f;}'
 
+try 42 'main(){i=0; for(i=0; i < 42; i = i + 1) {;} return i;}'
+try 42 'main(){i=0; for(; i < 42; i = i + 1) {;} return i;}'
+try 42 'main(){i=0; for(i=0;; i = i + 1) {if (i == 42) {return i;}} return 0;}'
+try 42 'main(){i=0; for(i=0; i < 42; ) {i=i+1;} return i;}'
+
 echo OK
 

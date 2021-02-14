@@ -25,6 +25,7 @@ typedef enum
     TK_RETURN,      // return
     TK_IF,          // if
     TK_ELSE,        // else
+    TK_FOR,         // for
     TK_EQ,          // ==
     TK_NEQ,         // !=
     TK_LESS_EQ,     // <=
@@ -55,6 +56,7 @@ typedef enum
     ND_RETURN,      // return
     ND_IF,          // if
     ND_ELSE,        // else
+    ND_FOR,         // for
     ND_EQ,          // ==
     ND_NEQ,         // !=
     ND_LESS_EQ,     // <=
@@ -91,14 +93,16 @@ typedef struct Node
     NodeType_t ty;
     struct Node *lhs;
     struct Node *rhs;
-    int val;                 // ND_NUMの場合の数値
-    const char *name;        // ND_IDENTの場合の名前
-    Vector *args;            // ND_CALLの引数
-    Vector *block_stmts;     // ND_BLOCKを構成する式群
-    struct Node *func_body;  // ND_FUNCDEFの定義となるブロック
-    struct Node *condition;  // ND_IF の条件式
-    struct Node *then;       // ND_IF で実行されるステートメント
-    struct Node *elsethen;   // ND_ELSE で実行されるステートメント
+    int val;                  // ND_NUMの場合の数値
+    const char *name;         // ND_IDENTの場合の名前
+    Vector *args;             // ND_CALLの引数
+    Vector *block_stmts;      // ND_BLOCKを構成する式群
+    struct Node *func_body;   // ND_FUNCDEFの定義となるブロック
+    struct Node *condition;   // if / for の条件式
+    struct Node *then;        // if / for で条件を満たすときに実行される文
+    struct Node *elsethen;    // if-else で条件を満たさないときに実行される文
+    struct Node *initializer; // for の初期化処理
+    struct Node *loopexpr;    // for のループ終了時の処理
 } Node;
 
 Vector *new_vector(void);

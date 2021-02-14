@@ -40,6 +40,8 @@ static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const c
     node->condition = 0;
     node->then = 0;
     node->elsethen = 0;
+    node->initializer = 0;
+    node->loopexpr = 0;
 
     return node;
 }
@@ -106,6 +108,17 @@ static Node *new_node_ifelse(Node *condition, Node *then, Node *elsethen)
     node->condition = condition;
     node->then = then;
     node->elsethen = elsethen;
+    return node;
+}
+
+// forノード
+static Node *new_node_for(Node *initializer, Node *condition, Node *loopexpr, Node *then)
+{
+    Node *node = new_node(ND_FOR, 0, 0);
+    node->initializer = initializer;
+    node->condition = condition;
+    node->loopexpr = loopexpr;
+    node->then = then;
     return node;
 }
 
@@ -419,6 +432,52 @@ static Node *stmt_if(Tokens *tks)
     return new_node_ifelse(condition, then, elsethen);
 }
 
+// for文
+static Node *stmt_for(Tokens *tks)
+{
+    // ここに来る時点ではFORトークンは消費済み
+
+    if (!consume(tks, TK_PROPEN))
+    {
+        error(tks, "for文には'('が必要です");
+    }
+
+    Node *initializer = NULL;
+    Node *condition = NULL;
+    Node *loopexpr = NULL;
+    if (!is_match_next_token(tks, TK_STMT))
+    {
+        initializer = expr(tks);
+    }
+    if (!consume(tks, TK_STMT))
+    {
+        error(tks, "for文には';'が必要です");
+    }
+
+    if (!is_match_next_token(tks, TK_STMT))
+    {
+        condition = expr(tks);
+    }
+    if (!consume(tks, TK_STMT))
+    {
+        error(tks, "for文には';'が必要です");
+    }
+
+    if (!is_match_next_token(tks, TK_PRCLOSE))
+    {
+        loopexpr = expr(tks);
+    }
+
+    if (!consume(tks, TK_PRCLOSE))
+    {
+        error(tks, "for文には')'が必要です");
+    }
+
+    Node *then = stmt(tks);
+
+    return new_node_for(initializer, condition, loopexpr, then);
+}
+
 // ステートメントノード
 static Node *stmt(Tokens *tks)
 {
@@ -435,6 +494,11 @@ static Node *stmt(Tokens *tks)
     else if (consume(tks, TK_IF))
     {
         node = stmt_if(tks);
+        return node;
+    }
+    else if (consume(tks, TK_FOR))
+    {
+        node = stmt_for(tks);
         return node;
     }
     else if (consume(tks, TK_STMT))
