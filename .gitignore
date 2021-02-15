@@ -6,3 +6,4 @@ bin/
 obj/
 test/testout*
 test/core
+.vscode/
