@@ -52,9 +52,7 @@ letter      = "a" | "b" | ... | "z" | "A" | "B" | ... | "Z"
 type        = "int"
 ```
 
-```
-
-# BNFについて
+## BNFについて
 
 https://ja.wikipedia.org/wiki/EBNF
 
