@@ -8,12 +8,12 @@
 #include "shcc.h"
 
 // vectorにtokenを追加
-static void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input)
+static void vec_push_token(Vector *vec, TokenType_t ty, int value, char *input)
 {
     Token *tk = (Token *)calloc(1, sizeof(Token));
 
     tk->ty = ty;
-    tk->val = val;
+    tk->value = value;
     tk->input = input;
 
     vec_push(vec, tk);

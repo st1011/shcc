@@ -102,7 +102,7 @@ typedef struct
 typedef struct
 {
     TokenType_t ty; // トークンの型
-    int val;        // TK_NUMなら数値
+    int value;      // TK_NUMなら数値
     char *input;    // トークン文字列
 } Token;
 
@@ -126,9 +126,9 @@ typedef struct FuncInfo
 typedef struct Node
 {
     NodeType_t ty;
-    struct Node *lhs;
-    struct Node *rhs;
-    int val;                  // ND_NUMの場合の数値
+    struct Node *lhs;         // 二項演算子の左辺、または単項演算子の被演算子
+    struct Node *rhs;         // 二項演算子の右辺
+    int value;                // ND_NUMの場合の数値
     Vector *block_stmts;      // ND_BLOCKを構成する式群
     struct Node *condition;   // if / for / while の条件式
     struct Node *then;        // if / for / while で条件を満たすときに実行される文

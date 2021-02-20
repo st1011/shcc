@@ -38,42 +38,48 @@ static Token *current_token(Tokens *tks)
     return tks->tokens->data[tks->pos];
 }
 
-// ノード作成のbody
-static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val)
+// ノード生成
+static Node *new_node(NodeType_t ty)
 {
     Node *node = calloc(1, sizeof(Node));
     node->ty = ty;
-    node->lhs = lhs;
-    node->rhs = rhs;
-    node->val = val;
-    node->block_stmts = new_vector();
-
-    node->condition = 0;
-    node->then = 0;
-    node->elsethen = 0;
-    node->initializer = 0;
-    node->loopexpr = 0;
 
     return node;
 }
 
-// 通常ノード
-static Node *new_node(NodeType_t ty, Node *lhs, Node *rhs)
+// 単項演算子用のノード生成
+static Node *new_node_unary_operator(NodeType_t ty, Node *operand)
 {
-    return new_node_body(ty, lhs, rhs, 0);
+    Node *node = new_node(ty);
+    node->lhs = operand;
+
+    return node;
+}
+
+// 二項演算子用のノード生成
+static Node *new_node_binary_operator(NodeType_t ty, Node *lhs, Node *rhs)
+{
+    Node *node = new_node(ty);
+    node->lhs = lhs;
+    node->rhs = rhs;
+
+    return node;
 }
 
 // 数値ノード
-static Node *new_node_num(int val)
+static Node *new_node_num(int value)
 {
-    return new_node_body(ND_NUM, 0, 0, val);
+    Node *node = new_node(ND_NUM);
+    node->value = value;
+
+    return node;
 }
 
 // 単項"-"ノード
 static Node *new_node_negative(Node *value)
 {
     // 0から引くアセンブリを吐くようにする
-    return new_node(ND_MINUS, new_node_num(0), value);
+    return new_node_binary_operator(ND_MINUS, new_node_num(0), value);
 }
 
 // 変数ノード
@@ -83,7 +89,7 @@ static Node *new_node_variable(const char *name, int offset)
     info->name = name;
     info->offset = offset;
 
-    Node *node = new_node_body(ND_VARIABLE, 0, 0, 0);
+    Node *node = new_node(ND_VARIABLE);
     node->variable = info;
     return node;
 }
@@ -95,7 +101,7 @@ static Node *new_node_vardef(const char *name, int offset)
     info->name = name;
     info->offset = offset;
 
-    Node *node = new_node_body(ND_VARDEF, 0, 0, 0);
+    Node *node = new_node(ND_VARDEF);
     node->variable = info;
     return node;
 }
@@ -107,7 +113,7 @@ static Node *new_node_funccall(const char *name)
     info->name = name;
     info->args = new_vector();
 
-    Node *node = new_node_body(ND_CALL, 0, 0, 0);
+    Node *node = new_node(ND_CALL);
     node->func = info;
     return node;
 }
@@ -119,33 +125,36 @@ static Node *new_node_funcdef(const char *name)
     info->name = name;
     info->args = new_vector();
 
-    Node *node = new_node_body(ND_FUNCDEF, 0, 0, 0);
+    Node *node = new_node(ND_FUNCDEF);
     node->func = info;
     return node;
 }
 
 // returnノード
-static Node *new_node_return(Node *lhs)
+static Node *new_node_return(Node *node)
 {
-    return new_node(ND_RETURN, lhs, 0);
+    return new_node_unary_operator(ND_RETURN, node);
 }
 
 // 空文 ノード
 static Node *new_node_empty_stmt(void)
 {
-    return new_node(ND_STMT, 0, 0);
+    return new_node(ND_STMT);
 }
 
 // Block ノード
 static Node *new_node_block(void)
 {
-    return new_node(ND_BLOCK, 0, 0);
+    Node *node = new_node(ND_BLOCK);
+    node->block_stmts = new_vector();
+
+    return node;
 }
 
 // if-elseノード
 static Node *new_node_ifelse(Node *condition, Node *then, Node *elsethen)
 {
-    Node *node = new_node(ND_IF, 0, 0);
+    Node *node = new_node(ND_IF);
     node->condition = condition;
     node->then = then;
     node->elsethen = elsethen;
@@ -155,7 +164,7 @@ static Node *new_node_ifelse(Node *condition, Node *then, Node *elsethen)
 // forノード
 static Node *new_node_for(Node *initializer, Node *condition, Node *loopexpr, Node *then)
 {
-    Node *node = new_node(ND_FOR, 0, 0);
+    Node *node = new_node(ND_FOR);
     node->initializer = initializer;
     node->condition = condition;
     node->loopexpr = loopexpr;
@@ -166,7 +175,7 @@ static Node *new_node_for(Node *initializer, Node *condition, Node *loopexpr, No
 // whileノード
 static Node *new_node_while(Node *condition, Node *then)
 {
-    Node *node = new_node(ND_WHILE, 0, 0);
+    Node *node = new_node(ND_WHILE);
     node->condition = condition;
     node->then = then;
     return node;
@@ -249,7 +258,7 @@ static Node *term(Tokens *tks)
     Token *tk = current_token(tks);
     if (consume(tks, TK_NUM))
     {
-        Node *node = new_node_num(tk->val);
+        Node *node = new_node_num(tk->value);
 
         return node;
     }
@@ -304,11 +313,11 @@ static Node *monomial(Tokens *tks)
     }
     else if (consume(tks, TK_ADDR))
     {
-        return new_node(ND_ADDR, monomial(tks), NULL);
+        return new_node_unary_operator(ND_ADDR, monomial(tks));
     }
     else if (consume(tks, TK_DEREF))
     {
-        return new_node(ND_DEREF, monomial(tks), NULL);
+        return new_node_unary_operator(ND_DEREF, monomial(tks));
     }
 
     return term(tks);
@@ -331,15 +340,15 @@ static Node *mul(Tokens *tks)
     {
         if (consume(tks, TK_MUL))
         {
-            node = new_node(ND_MUL, node, mul(tks));
+            node = new_node_binary_operator(ND_MUL, node, mul(tks));
         }
         else if (consume(tks, TK_DIV))
         {
-            node = new_node(ND_DIV, node, mul(tks));
+            node = new_node_binary_operator(ND_DIV, node, mul(tks));
         }
         else if (consume(tks, TK_MOD))
         {
-            node = new_node(ND_MOD, node, mul(tks));
+            node = new_node_binary_operator(ND_MOD, node, mul(tks));
         }
         else
         {
@@ -357,11 +366,11 @@ static Node *add(Tokens *tks)
     {
         if (consume(tks, TK_PLUS))
         {
-            node = new_node(ND_PLUS, node, add(tks));
+            node = new_node_binary_operator(ND_PLUS, node, add(tks));
         }
         else if (consume(tks, TK_MINUS))
         {
-            node = new_node(ND_MINUS, node, add(tks));
+            node = new_node_binary_operator(ND_MINUS, node, add(tks));
         }
         else
         {
@@ -387,19 +396,19 @@ static Node *comparison(Tokens *tks)
     {
         if (consume(tks, TK_LESS))
         {
-            node = new_node(ND_LESS, node, comparison(tks));
+            node = new_node_binary_operator(ND_LESS, node, comparison(tks));
         }
         else if (consume(tks, TK_GREATER))
         {
-            node = new_node(ND_GREATER, node, comparison(tks));
+            node = new_node_binary_operator(ND_GREATER, node, comparison(tks));
         }
         else if (consume(tks, TK_LESS_EQ))
         {
-            node = new_node(ND_LESS_EQ, node, comparison(tks));
+            node = new_node_binary_operator(ND_LESS_EQ, node, comparison(tks));
         }
         else if (consume(tks, TK_GREATER_EQ))
         {
-            node = new_node(ND_GREATER_EQ, node, comparison(tks));
+            node = new_node_binary_operator(ND_GREATER_EQ, node, comparison(tks));
         }
         else
         {
@@ -417,11 +426,11 @@ static Node *equality(Tokens *tks)
     {
         if (consume(tks, TK_EQ))
         {
-            node = new_node(ND_EQ, node, comparison(tks));
+            node = new_node_binary_operator(ND_EQ, node, comparison(tks));
         }
         else if (consume(tks, TK_NEQ))
         {
-            node = new_node(ND_NEQ, node, comparison(tks));
+            node = new_node_binary_operator(ND_NEQ, node, comparison(tks));
         }
         else
         {
@@ -484,33 +493,33 @@ static Node *assign(Tokens *tks)
     Node *node = conditional(tks);
     if (consume(tks, TK_ASSIGN))
     {
-        node = new_node(ND_ASSIGN, node, assign(tks));
+        node = new_node_binary_operator(ND_ASSIGN, node, assign(tks));
     }
     else if (consume(tks, TK_ADD_ASSIGN))
     {
         // [a += b;] = [a = a + b;]
-        Node *expr = new_node(ND_PLUS, node, assign(tks));
-        node = new_node(ND_ASSIGN, node, expr);
+        Node *expr = new_node_binary_operator(ND_PLUS, node, assign(tks));
+        node = new_node_binary_operator(ND_ASSIGN, node, expr);
     }
     else if (consume(tks, TK_SUB_ASSIGN))
     {
-        Node *expr = new_node(ND_MINUS, node, assign(tks));
-        node = new_node(ND_ASSIGN, node, expr);
+        Node *expr = new_node_binary_operator(ND_MINUS, node, assign(tks));
+        node = new_node_binary_operator(ND_ASSIGN, node, expr);
     }
     else if (consume(tks, TK_MUL_ASSIGN))
     {
-        Node *expr = new_node(ND_MUL, node, assign(tks));
-        node = new_node(ND_ASSIGN, node, expr);
+        Node *expr = new_node_binary_operator(ND_MUL, node, assign(tks));
+        node = new_node_binary_operator(ND_ASSIGN, node, expr);
     }
     else if (consume(tks, TK_DIV_ASSIGN))
     {
-        Node *expr = new_node(ND_DIV, node, assign(tks));
-        node = new_node(ND_ASSIGN, node, expr);
+        Node *expr = new_node_binary_operator(ND_DIV, node, assign(tks));
+        node = new_node_binary_operator(ND_ASSIGN, node, expr);
     }
     else if (consume(tks, TK_MOD_ASSIGN))
     {
-        Node *expr = new_node(ND_MOD, node, assign(tks));
-        node = new_node(ND_ASSIGN, node, expr);
+        Node *expr = new_node_binary_operator(ND_MOD, node, assign(tks));
+        node = new_node_binary_operator(ND_ASSIGN, node, expr);
     }
 
     return node;

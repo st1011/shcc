@@ -157,7 +157,7 @@ static void gen_asm_expr(Node *node)
     {
     case ND_NUM:
     {
-        printf("  push %d\n", node->val);
+        printf("  push %d\n", node->value);
         return;
     }
     case ND_CALL:
