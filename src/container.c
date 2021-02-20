@@ -32,18 +32,6 @@ void vec_push(Vector *vec, void *elem)
     vec->data[vec->len++] = elem;
 }
 
-// vectorにtokenを追加
-void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input)
-{
-    Token *tk = (Token *)calloc(1, sizeof(Token));
-
-    tk->ty = ty;
-    tk->val = val;
-    tk->input = input;
-
-    vec_push(vec, tk);
-}
-
 // 新しいマップの作成
 Map *new_map(void)
 {

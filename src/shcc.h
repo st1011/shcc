@@ -6,6 +6,7 @@
 // トークンの型を表す値
 typedef enum
 {
+    TK_INVALID = 0,
     TK_PLUS = '+',
     TK_MINUS = '-',
     TK_MUL = '*',
@@ -123,7 +124,6 @@ typedef struct Node
 
 Vector *new_vector(void);
 void vec_push(Vector *vec, void *elem);
-void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input);
 
 Map *new_map(void);
 void map_put(Map *map, const char *key, void *val);

@@ -7,41 +7,17 @@
 
 #include "shcc.h"
 
-// 複数文字からなるトークン
-static struct
+// vectorにtokenを追加
+static void vec_push_token(Vector *vec, TokenType_t ty, int val, char *input)
 {
-    TokenType_t ty;
-    const char *name;
-} symbols[] = {
-    {TK_EQ, "=="},
-    {TK_NEQ, "!="},
-    {TK_LESS_EQ, "<="},
-    {TK_GREATER_EQ, ">="},
-    {TK_ADD_ASSIGN, "+="},
-    {TK_SUB_ASSIGN, "-="},
-    {TK_MUL_ASSIGN, "*="},
-    {TK_DIV_ASSIGN, "/="},
-    {TK_MOD_ASSIGN, "%="},
-};
+    Token *tk = (Token *)calloc(1, sizeof(Token));
 
-// 1文字の演算子
-static char one_operation_list[] = {
-    TK_PLUS,
-    TK_MINUS,
-    TK_MUL,
-    TK_DIV,
-    TK_MOD,
-    TK_PROPEN,
-    TK_PRCLOSE,
-    TK_ASSIGN,
-    TK_LESS,
-    TK_GREATER,
-    TK_BRACE_OPEN,
-    TK_BRACE_CLOSE,
-    TK_ADDR,
-    TK_DEREF,
-    TK_STMT,
-};
+    tk->ty = ty;
+    tk->val = val;
+    tk->input = input;
+
+    vec_push(vec, tk);
+}
 
 // 識別子の先頭になり得る文字か？
 // [a-zA-Z_]
@@ -57,18 +33,38 @@ static bool is_idnet_char(char ch)
     return is_idnet_head_char(ch) || isdigit(ch);
 }
 
-// 一文字式か？
-static bool is_oneop(char ch)
+// 演算子のマップを生成・取得
+static Map *get_operator_list(void)
 {
-    for (int i = 0; i < NUMOF(one_operation_list); i++)
-    {
-        if (ch == one_operation_list[i])
-        {
-            return true;
-        }
-    }
+    Map *operator_list = new_map();
 
-    return false;
+    map_puti(operator_list, "==", TK_EQ);
+    map_puti(operator_list, "!=", TK_NEQ);
+    map_puti(operator_list, "<=", TK_LESS_EQ);
+    map_puti(operator_list, ">=", TK_GREATER_EQ);
+    map_puti(operator_list, "+=", TK_ADD_ASSIGN);
+    map_puti(operator_list, "-=", TK_SUB_ASSIGN);
+    map_puti(operator_list, "*=", TK_MUL_ASSIGN);
+    map_puti(operator_list, "/=", TK_DIV_ASSIGN);
+    map_puti(operator_list, "%=", TK_MOD_ASSIGN);
+
+    map_puti(operator_list, "+", TK_PLUS);
+    map_puti(operator_list, "-", TK_MINUS);
+    map_puti(operator_list, "*", TK_MUL);
+    map_puti(operator_list, "/", TK_DIV);
+    map_puti(operator_list, "%", TK_MOD);
+    map_puti(operator_list, "(", TK_PROPEN);
+    map_puti(operator_list, ")", TK_PRCLOSE);
+    map_puti(operator_list, "=", TK_ASSIGN);
+    map_puti(operator_list, "<", TK_LESS);
+    map_puti(operator_list, ">", TK_GREATER);
+    map_puti(operator_list, "{", TK_BRACE_OPEN);
+    map_puti(operator_list, "}", TK_BRACE_CLOSE);
+    map_puti(operator_list, "&", TK_ADDR);
+    map_puti(operator_list, "*", TK_DEREF);
+    map_puti(operator_list, ";", TK_STMT);
+
+    return operator_list;
 }
 
 // 予約後のマップを生成・取得
@@ -85,49 +81,77 @@ static Map *get_reserved_words(void)
     return reserved_words;
 }
 
+// オペレータのトークナイズ
+static int consume_operator(Vector *tk, const Map *operator_list, const char *p)
+{
+    const int MAX_OPERATOR_LENGTH = 2;
+
+    char *operator=(char *) calloc(MAX_OPERATOR_LENGTH + 1, sizeof(char));
+    strncpy(operator, p, MAX_OPERATOR_LENGTH);
+
+    for (int i = MAX_OPERATOR_LENGTH; i > 0; i--)
+    {
+        // 探索したい長さのオペレータではない
+        if (operator[i - 1] == '\0')
+        {
+            continue;
+        }
+        operator[i] = '\0';
+
+        TokenType_t ty = (TokenType_t)map_geti(operator_list, operator);
+        if (ty != TK_INVALID)
+        {
+            vec_push_token(tk, ty, 0, operator);
+            return i;
+        }
+    }
+
+    // operatorが見つからなかった
+    return 0;
+}
+
+// 引数の先頭からidentの構成要素の連続列の長さを取得する
+static int get_ident_length(const char *p)
+{
+    if (!is_idnet_head_char(*p))
+    {
+        // identの先頭に数字は使えない
+        return 0;
+    }
+
+    for (int len = 0;; len++)
+    {
+        if (!is_idnet_char(p[len]))
+        {
+            return len;
+        }
+    }
+}
+
 // 識別子をトークナイズ
 // 変数も予約語もここで処理する
-static char *ident(Vector *tk, const Map *rwords, char *p)
+static int consume_ident(Vector *tk, const Map *rwords, const char *p)
 {
     // キーワード文字列を抜き出す
-    int len = 1;
-    while (is_idnet_char(p[len]))
+    int len = get_ident_length(p);
+    if (len == 0)
     {
-        len++;
+        return 0;
     }
+
     char *name = (char *)calloc(len + 1, sizeof(char));
     strncpy(name, p, len);
     name[len] = '\0';
 
     // 抜き出した文字列の識別子を調べる
-    int ty = map_geti(rwords, name);
-    if (ty == 0)
+    TokenType_t ty = (TokenType_t)map_geti(rwords, name);
+    if (ty == TK_INVALID)
     {
         // 予約後ではないので、変数
         ty = TK_IDENT;
     }
 
     vec_push_token(tk, ty, 0, name);
-
-    return p + len;
-}
-
-// 複数文字のoperand
-static int multi_symbols(Vector *tk, char *p)
-{
-    int len = 0;
-
-    for (int i = 0; i < NUMOF(symbols); i++)
-    {
-        const char *name = symbols[i].name;
-
-        if (strncmp(p, name, strlen(name)) == 0)
-        {
-            vec_push_token(tk, symbols[i].ty, 0, p);
-            len = strlen(name);
-            break;
-        }
-    }
 
     return len;
 }
@@ -137,6 +161,7 @@ static int multi_symbols(Vector *tk, char *p)
 Vector *tokenize(char *p)
 {
     Vector *tk = new_vector();
+    Map *operators = get_operator_list();
     Map *rwords = get_reserved_words();
 
     while (*p)
@@ -148,27 +173,20 @@ Vector *tokenize(char *p)
             continue;
         }
 
-        // 複数文字のoperand
-        int next = multi_symbols(tk, p);
-        if (next != 0)
+        // 演算子
+        int operator_length = consume_operator(tk, operators, p);
+        if (operator_length != 0)
         {
-            p += next;
-            continue;
-        }
-
-        // operand
-        if (is_oneop(*p))
-        {
-            vec_push_token(tk, *p, 0, p);
-            p++;
+            p += operator_length;
             continue;
         }
 
         // 識別子
         // 変数も予約後もここで
-        if (is_idnet_head_char(*p))
+        int ident_length = consume_ident(tk, rwords, p);
+        if (ident_length != 0)
         {
-            p = ident(tk, rwords, p);
+            p += ident_length;
             continue;
         }
 
