@@ -11,6 +11,9 @@ typedef struct
 {
     Vector *tokens;
     int pos;
+
+    // とりあえず定義確認用に
+    Map *variables;
 } Tokens;
 
 static Node *expr(Tokens *tks);
@@ -69,6 +72,12 @@ static Node *new_node_negative(Node *value)
 static Node *new_node_ident(const char *name)
 {
     return new_node_body(ND_IDENT, 0, 0, 0, name);
+}
+
+// 識別子ノード
+static Node *new_node_vardef(const char *name)
+{
+    return new_node_body(ND_VARDEF, 0, 0, 0, name);
 }
 
 // 関数ノード
@@ -201,6 +210,12 @@ static Node *term(Tokens *tks)
         else
         {
             // 変数
+            if (map_get(tks->variables, tk->input) == NULL)
+            {
+                char *msg = calloc(256, sizeof(char));
+                snprintf(msg, 256, "未定義の変数'%s'です", tk->input);
+                error(tks, msg);
+            }
             node = new_node_ident(tk->input);
         }
 
@@ -575,6 +590,19 @@ static Node *stmt(Tokens *tks)
     {
         return new_node_empty_stmt();
     }
+    else if (consume(tks, TK_INT))
+    {
+        Token *tk = current_token(tks);
+
+        // 変数定義
+        if (!consume(tks, TK_IDENT))
+        {
+            error(tks, "変数名の必要があります。");
+        }
+
+        node = new_node_vardef(tk->input);
+        map_puti(tks->variables, tk->input, sizeof(int));
+    }
     else
     {
         node = expr(tks);
@@ -623,6 +651,12 @@ static Node *funcdef(Tokens *tks)
 {
     Token *tk = current_token(tks);
 
+    if (!consume(tks, TK_INT))
+    {
+        error(tks, "関数の戻り値が未定義です。");
+    }
+
+    tk = current_token(tks);
     if (!consume(tks, TK_IDENT))
     {
         error(tks, "top階層に関数が見つかりません");
@@ -638,11 +672,18 @@ static Node *funcdef(Tokens *tks)
     // 仮引数
     while (!consume(tks, TK_PRCLOSE))
     {
+        if (!consume(tks, TK_INT))
+        {
+            error(tks, "仮引数の型が未定義です。");
+        }
+
         tk = current_token(tks);
         if (!consume(tks, TK_IDENT))
         {
             error(tks, "仮引数の宣言が不正です");
         }
+        // TODO そろそろスコープを真面目に考えるときが……
+        map_puti(tks->variables, tk->input, sizeof(int));
         vec_push(node->args, tk->input);
     }
     // 関数定義本体（ブレース内）
@@ -655,8 +696,13 @@ static Node *funcdef(Tokens *tks)
 Vector *program(Vector *token_list)
 {
     Vector *code = new_vector();
+    Map *variables = new_map();
 
-    Tokens tokens = {.tokens = token_list, .pos = 0};
+    Tokens tokens = {
+        .tokens = token_list,
+        .pos = 0,
+        .variables = variables};
+
     for (;;)
     {
         if (is_match_next_token(&tokens, TK_EOF))

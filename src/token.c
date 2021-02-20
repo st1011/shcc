@@ -72,6 +72,7 @@ static Map *get_reserved_words(void)
 {
     Map *reserved_words = new_map();
 
+    map_puti(reserved_words, "int", TK_INT);
     map_puti(reserved_words, "return", TK_RETURN);
     map_puti(reserved_words, "if", TK_IF);
     map_puti(reserved_words, "else", TK_ELSE);

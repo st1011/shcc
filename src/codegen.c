@@ -104,28 +104,36 @@ static void gen_asm_lval(Node *node)
         error("代入の左辺値が変数ではありません");
     }
 
-    int *v = (int *)(intptr_t)map_get(vars, node->name);
-
-    int offset = 0;
-    if (v != NULL)
+    int *v = (int *)map_get(vars, node->name);
+    if (v == NULL)
     {
-        // すでに存在する変数
-        offset = *v;
-    }
-    else
-    {
-        // 新しい変数（変数定義）
-        offset = stack_offset;
-        map_puti(vars, node->name, stack_offset);
-
-        printf("  sub rsp, %d\t\t# new variable\n", stack_unit); // スタック待避
-        stack_offset += stack_unit;
+        char *msg = calloc(256, sizeof(char));
+        snprintf(msg, 256, "未定義の変数'%s'です", node->name);
+        error(msg);
     }
 
+    int offset = *v;
     printf("  #%s = [RBP-%d]\n", node->name, offset);
     printf("  mov rax, rbp\n");
     printf("  sub rax, %d\n", offset);
     printf("  push rax\t\t# var addr\n");
+}
+
+// 変数を定義する
+//  ≒ 変数用のスタックを確保する
+static void gen_asm_vardef(Node *node)
+{
+    if (node->ty != ND_VARDEF)
+    {
+        error("変数定義ではありません");
+    }
+
+    int offset = stack_offset;
+    map_puti(vars, node->name, stack_offset);
+
+    printf("  # New variable '%s' = [RBP-%d]\n", node->name, offset);
+    printf("  sub rsp, %d\n", stack_unit); // スタック待避
+    stack_offset += stack_unit;
 }
 
 // 式のアセンブリ出力
@@ -402,6 +410,12 @@ static void gen_asm_stmt(Node *node)
         gen_asm_stmt(node->then);
         printf("  jmp .Lbegin%d\n", label_no);
         printf(".Lend%d:\n", label_no);
+        return;
+    }
+    case ND_VARDEF:
+    {
+        // 変数の領域確保
+        gen_asm_vardef(node);
         return;
     }
     case ND_STMT:

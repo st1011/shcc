@@ -4,15 +4,17 @@
 
 ```
 global      = funcdef*
-funcef      = ident "(" ")" multi_stmt
+funcef      = type ident "(" {type ident {" " type ident}} ")" multi_stmt
+vardef      = type ident
 multi_stmt  = "{" {stmt} "}"
 stmt        = multi_stmt
             | "if" "(" expr ")" stmt ["else" stmt]
             | "for" "(" [expr] ";" [expr] ";" [expr] ")" stmt
             | "while" "(" expr ")" stmt
             | "return" [expr] ";"
-            | ";"
+            | vardef ";"
             | expr ";"
+            | ";"
 expr        = assign
 assign      = conditional
             | conditional "=" assign
@@ -46,6 +48,8 @@ num         = digit {digit}
 
 digit       = "0" | "1" | ... | "9"
 letter      = "a" | "b" | ... | "z" | "A" | "B" | ... | "Z"
+
+type        = "int"
 ```
 
 ```
