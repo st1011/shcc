@@ -11,12 +11,11 @@
 static void gen_asm_expr(Node *node);
 static void gen_asm_stmt(Node *node);
 
-static Map *vars = 0;
-static int stack_offset = 0;
 // 条件分岐などで連番を作成するために使用する
 static int global_label_no = 0;
 
-static const int stack_unit = 8;
+// スタックのpush/popで移動する量
+static const int STACK_UNIT = 8;
 
 // 引数に使うレジスタ
 static const char *arg_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
@@ -47,28 +46,33 @@ static void gen_asm_func_head(FuncInfo *func)
     printf("  push rbp\n");
     printf("  mov rbp, rsp\n");
 
-    // pushするとスタックポインタをずらす->格納としてくれるので意識しなくてよいが
-    // prologueではRSPを手動でずらすことになる
-    // RSPは使用済みのスタックを指しているので、上書きしないように少なくとも1単位はずらす必要がある
-    stack_offset += stack_unit;
-
     // 引数の個数チェック
     assert(func->args->len <= NUMOF(arg_regs));
 
     // 引数をスタックに展開
+    int args_stack = STACK_UNIT;
     for (int i = 0; i < func->args->len; i++)
     {
-        map_puti(vars, func->args->data[i], stack_offset);
+        // map_puti(vars, func->args->data[i], stack_offset);
 
         // ベースポインタとのオフセットを算出し、引数レジスタの値をオフセット位置へ格納する
         printf("  mov rax, rbp\n");
-        printf("  sub rax, %d\n", stack_offset);
+        printf("  sub rax, %d\n", args_stack);
         printf("  mov [rax], %s\n", arg_regs[i]);
 
-        stack_offset += stack_unit;
+        args_stack += STACK_UNIT;
     }
 
-    printf("  sub rsp, %d\t\t# stack evacuation\n", stack_offset); // スタック待避
+    // ここですでにこの関数が使用する最大のスタックサイズが分かるようになった(はず)ので
+    // 一括でスタックをずらしておく
+    // pushするとスタックポインタをずらす->格納としてくれるので意識しなくてよいが
+    // prologueではRSPを手動でずらすことになる
+    // RSPは使用済みのスタックを指しているので、上書きしないように少なくとも1単位はずらす必要がある
+    int shift_stack_size = STACK_UNIT + func->stack_size;
+    // 関数呼び出し時は16Bアラインされている必要があるので、ここで合わせておく
+    shift_stack_size = ((shift_stack_size + (16 - 1)) / 16) * 16;
+
+    printf("  sub rsp, %d\t\t# stack evacuation\n", shift_stack_size); // スタック待避
     printf("  # function prologue end\n");
     puts("");
 }
@@ -99,18 +103,9 @@ static void error(const char *msg)
 // 該当アドレスをpush
 static void gen_asm_lval(VariableInfo *variable)
 {
-    int *v = (int *)map_get(vars, variable->name);
-    if (v == NULL)
-    {
-        char *msg = calloc(256, sizeof(char));
-        snprintf(msg, 256, "未定義の変数'%s'です", variable->name);
-        error(msg);
-    }
-
-    int offset = *v;
-    printf("  #%s = [RBP-%d]\n", variable->name, offset);
+    printf("  # %s = [RBP-%d]\n", variable->name, variable->offset + STACK_UNIT);
     printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", offset);
+    printf("  sub rax, %d\n", variable->offset + STACK_UNIT);
     printf("  push rax\t\t# var addr\n");
 }
 
@@ -118,12 +113,8 @@ static void gen_asm_lval(VariableInfo *variable)
 //  ≒ 変数用のスタックを確保する
 static void gen_asm_vardef(VariableInfo *variable)
 {
-    int offset = stack_offset;
-    map_puti(vars, variable->name, stack_offset);
-
-    printf("  # New variable '%s' = [RBP-%d]\n", variable->name, offset);
-    printf("  sub rsp, %d\n", stack_unit); // スタック待避
-    stack_offset += stack_unit;
+    printf("  # New variable '%s' = [RBP-%d]\n", variable->name, variable->offset + STACK_UNIT);
+    // 関数の先頭で一括スタック待避しているのでここでは実際の操作は行なわない
 }
 
 // 関数呼び出しのアセンブリ出力
@@ -152,21 +143,7 @@ static void gen_asm_func_call(FuncInfo *func)
         printf("  pop %s\n", arg_regs[i]);
     }
 
-    int align = stack_offset % 16;
-    if (align != 0)
-    {
-        // 関数呼び出し時のRSPは16Bアラインされている必要がある
-        printf("  sub rsp, 8\t\t# 16B align\n");
-        stack_offset += 8;
-    }
-
     printf("  call %s\n", func->name);
-    if (align != 0)
-    {
-        // 呼び出し時にアラインのためずらしたRSPを戻す
-        printf("  add rsp, 8\t\t# restore 16B align\n");
-        stack_offset -= 8;
-    }
 
     // 戻り値
     printf("  push rax\n");
@@ -326,17 +303,11 @@ static void gen_asm_stmt(Node *node)
     {
     case ND_BLOCK:
     {
-        int len = vars->keys->len;
-
         for (int j = 0; node->block_stmts->data[j]; j++)
         {
             Node *stmt = (Node *)node->block_stmts->data[j];
             gen_asm_stmt(stmt);
         }
-
-        // 無理矢理ブロック突入時の変数状態に戻す
-        vars->keys->len = len;
-        vars->vals->len = len;
         return;
     }
     case ND_RETURN:
@@ -442,10 +413,6 @@ void gen_asm(Vector *code)
     {
         Node *funcdef = code->data[i];
         assert(funcdef->ty == ND_FUNCDEF);
-
-        // 関数ごとにスタックや変数一覧はクリアされる
-        stack_offset = 0;
-        vars = new_map();
 
         gen_asm_func_head(funcdef->func);
         gen_asm_stmt(funcdef->func->body);

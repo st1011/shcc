@@ -110,6 +110,7 @@ typedef struct
 typedef struct VariableInfo
 {
     const char *name; // 変数名
+    int offset;       // RBPからのオフセット
 } VariableInfo;
 
 // 関数
@@ -118,6 +119,7 @@ typedef struct FuncInfo
     const char *name;  // 関数名
     struct Node *body; // ND_FUNCDEFの定義となるブロック
     Vector *args;      // 引数
+    int stack_size;    // この関数が最大で使用するスタックサイズ
 } FuncInfo;
 
 // 抽象構文木ノード

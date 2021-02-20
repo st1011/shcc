@@ -7,13 +7,24 @@
 
 #include "shcc.h"
 
+// スタックというか、レジスタとのやりとりを8B単位でしかやっていないので
+// 今はこの単位の変数しか作れない
+// そのうち消せるはずなので、今の段階では余り気にしない
+const int STACK_UNIT = 8;
+
 typedef struct
 {
     Vector *tokens;
     int pos;
 
-    // とりあえず定義確認用に
-    Map *variables;
+    // 変数を管理するベクタ
+    // [0]: グローバル変数
+    // [1]: ローカル変数
+    // 以降、スコープを一つ潜るたびにindexが増え、抜けるたびにindexが減る
+    Vector *variables;
+    // RBPからのオフセット
+    //   parserにRBPなんて言葉が出てくるのはあんまりよい気はしないが……
+    int variable_offset;
 } Tokens;
 
 static Node *expr(Tokens *tks);
@@ -66,10 +77,11 @@ static Node *new_node_negative(Node *value)
 }
 
 // 変数ノード
-static Node *new_node_variable(const char *name)
+static Node *new_node_variable(const char *name, int offset)
 {
     VariableInfo *info = calloc(1, sizeof(VariableInfo));
     info->name = name;
+    info->offset = offset;
 
     Node *node = new_node_body(ND_VARIABLE, 0, 0, 0);
     node->variable = info;
@@ -77,10 +89,11 @@ static Node *new_node_variable(const char *name)
 }
 
 // 変数定義ノード
-static Node *new_node_vardef(const char *name)
+static Node *new_node_vardef(const char *name, int offset)
 {
     VariableInfo *info = calloc(1, sizeof(VariableInfo));
     info->name = name;
+    info->offset = offset;
 
     Node *node = new_node_body(ND_VARDEF, 0, 0, 0);
     node->variable = info;
@@ -177,6 +190,35 @@ static bool is_match_next_token(Tokens *tks, int ty)
     return tk->ty == ty;
 }
 
+// 変数のオフセット値を取得する
+static bool get_variable_offset(Tokens *tks, const char *name, int *offset)
+{
+    // よりローカルな方のスコープから探索すればCっぽいスコープ管理になる
+    for (int i = tks->variables->len - 1; i >= 0; i--)
+    {
+        int *value = (int *)map_get((const Map *)tks->variables->data[i], name);
+        if (value != NULL)
+        {
+            if (offset != NULL)
+            {
+                *offset = *value;
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// 変数を宣言可能か？
+static bool can_declaration_variable(Tokens *tks, const char *name)
+{
+    // 一番ローカルなスコープになければOK
+    void *value = map_get((const Map *)tks->variables->data[tks->variables->len - 1], name);
+
+    return value == NULL;
+}
+
 // 次トークンがtyか確認し、tyの時のみトークンを一つ進める
 static bool consume(Tokens *tks, int ty)
 {
@@ -228,14 +270,15 @@ static Node *term(Tokens *tks)
         }
         else
         {
-            // 変数
-            if (map_get(tks->variables, tk->input) == NULL)
+            int offset = 0;
+            if (!get_variable_offset(tks, tk->input, &offset))
             {
                 char *msg = calloc(256, sizeof(char));
                 snprintf(msg, 256, "未定義の変数'%s'です", tk->input);
                 error(tks, msg);
             }
-            node = new_node_variable(tk->input);
+
+            node = new_node_variable(tk->input, offset);
         }
 
         return node;
@@ -619,8 +662,16 @@ static Node *stmt(Tokens *tks)
             error(tks, "変数名の必要があります。");
         }
 
-        node = new_node_vardef(tk->input);
-        map_puti(tks->variables, tk->input, sizeof(int));
+        if (!can_declaration_variable(tks, tk->input))
+        {
+            char *msg = calloc(256, sizeof(char));
+            snprintf(msg, 256, "定義済みの変数'%s'です", tk->input);
+            error(tks, msg);
+        }
+
+        map_puti(tks->variables->data[tks->variables->len - 1], tk->input, tks->variable_offset);
+        node = new_node_vardef(tk->input, tks->variable_offset);
+        tks->variable_offset += STACK_UNIT;
     }
     else
     {
@@ -638,6 +689,12 @@ static Node *stmt(Tokens *tks)
 // 複文 / ブロック（{}）
 static Node *multi_stmt(Tokens *tks)
 {
+    int current_scope_depth = tks->variables->len;
+
+    // このスコープ用のローカル変数MAPをつくる
+    Map *local_variables = new_map();
+    vec_push(tks->variables, local_variables);
+
     Node *node = new_node_block();
 
     if (!consume(tks, TK_BRACE_OPEN))
@@ -661,6 +718,7 @@ static Node *multi_stmt(Tokens *tks)
         }
     }
 
+    tks->variables->len = current_scope_depth;
     vec_push(node->block_stmts, NULL);
     return node;
 }
@@ -668,6 +726,15 @@ static Node *multi_stmt(Tokens *tks)
 // 関数定義
 static Node *funcdef(Tokens *tks)
 {
+    int current_scope_depth = tks->variables->len;
+
+    // この関数用のローカル変数MAPをつくる
+    Map *local_variables = new_map();
+    vec_push(tks->variables, local_variables);
+
+    // 関数ごとに変数のオフセットはクリアする
+    tks->variable_offset = 0;
+
     Token *tk = current_token(tks);
 
     if (!consume(tks, TK_INT))
@@ -701,13 +768,24 @@ static Node *funcdef(Tokens *tks)
         {
             error(tks, "仮引数の宣言が不正です");
         }
-        // TODO そろそろスコープを真面目に考えるときが……
-        map_puti(tks->variables, tk->input, sizeof(int));
+
+        if (!can_declaration_variable(tks, tk->input))
+        {
+            char *msg = calloc(256, sizeof(char));
+            snprintf(msg, 256, "定義済みの変数'%s'です", tk->input);
+            error(tks, msg);
+        }
+
+        // うーん、引数もきちんとマッピングしておかないと後々困りそうな……
+        map_puti(local_variables, tk->input, tks->variable_offset);
+        tks->variable_offset += STACK_UNIT;
         vec_push(node->func->args, tk->input);
     }
     // 関数定義本体（ブレース内）
     node->func->body = multi_stmt(tks);
+    node->func->stack_size = tks->variable_offset;
 
+    tks->variables->len = current_scope_depth;
     return node;
 }
 
@@ -715,12 +793,13 @@ static Node *funcdef(Tokens *tks)
 Vector *program(Vector *token_list)
 {
     Vector *code = new_vector();
-    Map *variables = new_map();
+    Vector *variables = new_vector();
 
     Tokens tokens = {
         .tokens = token_list,
         .pos = 0,
-        .variables = variables};
+        .variables = variables,
+        .variable_offset = 0};
 
     for (;;)
     {
