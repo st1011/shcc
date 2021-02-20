@@ -36,7 +36,7 @@ void gen_asm_epilog(void)
 }
 
 // 関数プロローグ
-static void gen_asm_func_head(Node *func)
+static void gen_asm_func_head(FuncInfo *func)
 {
     puts("");
     printf(".global %s\n", func->name);
@@ -97,43 +97,79 @@ static void error(const char *msg)
 
 // 左辺値のアセンブリ出力
 // 該当アドレスをpush
-static void gen_asm_lval(Node *node)
+static void gen_asm_lval(VariableInfo *variable)
 {
-    if (node->ty != ND_IDENT)
-    {
-        error("代入の左辺値が変数ではありません");
-    }
-
-    int *v = (int *)map_get(vars, node->name);
+    int *v = (int *)map_get(vars, variable->name);
     if (v == NULL)
     {
         char *msg = calloc(256, sizeof(char));
-        snprintf(msg, 256, "未定義の変数'%s'です", node->name);
+        snprintf(msg, 256, "未定義の変数'%s'です", variable->name);
         error(msg);
     }
 
     int offset = *v;
-    printf("  #%s = [RBP-%d]\n", node->name, offset);
+    printf("  #%s = [RBP-%d]\n", variable->name, offset);
     printf("  mov rax, rbp\n");
     printf("  sub rax, %d\n", offset);
     printf("  push rax\t\t# var addr\n");
 }
 
-// 変数を定義する
+// 変数を定義のアセンブリ出力
 //  ≒ 変数用のスタックを確保する
-static void gen_asm_vardef(Node *node)
+static void gen_asm_vardef(VariableInfo *variable)
 {
-    if (node->ty != ND_VARDEF)
-    {
-        error("変数定義ではありません");
-    }
-
     int offset = stack_offset;
-    map_puti(vars, node->name, stack_offset);
+    map_puti(vars, variable->name, stack_offset);
 
-    printf("  # New variable '%s' = [RBP-%d]\n", node->name, offset);
+    printf("  # New variable '%s' = [RBP-%d]\n", variable->name, offset);
     printf("  sub rsp, %d\n", stack_unit); // スタック待避
     stack_offset += stack_unit;
+}
+
+// 関数呼び出しのアセンブリ出力
+static void gen_asm_func_call(FuncInfo *func)
+{
+    // 関数呼び出し
+    // 今はとりあえず上限までレジスタ格納しておく
+
+    // 引数の個数チェック
+    assert(func->args->len <= NUMOF(arg_regs));
+
+    // 引数の数
+    if (func->args->len > 0)
+    {
+        printf("  mov rax, %d\n", func->args->len);
+    }
+
+    // 一度すべての計算結果をスタックに積む
+    for (int i = (int)func->args->len - 1; i >= 0; i--)
+    {
+        gen_asm_expr(func->args->data[i]);
+    }
+    // スタックから取り出しながら引数レジスタに格納する
+    for (int i = 0; i < func->args->len; i++)
+    {
+        printf("  pop %s\n", arg_regs[i]);
+    }
+
+    int align = stack_offset % 16;
+    if (align != 0)
+    {
+        // 関数呼び出し時のRSPは16Bアラインされている必要がある
+        printf("  sub rsp, 8\t\t# 16B align\n");
+        stack_offset += 8;
+    }
+
+    printf("  call %s\n", func->name);
+    if (align != 0)
+    {
+        // 呼び出し時にアラインのためずらしたRSPを戻す
+        printf("  add rsp, 8\t\t# restore 16B align\n");
+        stack_offset -= 8;
+    }
+
+    // 戻り値
+    printf("  push rax\n");
 }
 
 // 式のアセンブリ出力
@@ -149,53 +185,13 @@ static void gen_asm_expr(Node *node)
     }
     case ND_CALL:
     {
-        // 関数呼び出し
-        // 今はとりあえず上限までレジスタ格納しておく
-
-        // 引数の個数チェック
-        assert(node->args->len <= NUMOF(arg_regs));
-
-        // 引数の数
-        if (node->args->len > 0)
-        {
-            printf("  mov rax, %d\n", node->args->len);
-        }
-
-        // 一度すべての計算結果をスタックに積む
-        for (int i = (int)node->args->len - 1; i >= 0; i--)
-        {
-            gen_asm_expr(node->args->data[i]);
-        }
-        // スタックから取り出しながら引数レジスタに格納する
-        for (int i = 0; i < node->args->len; i++)
-        {
-            printf("  pop %s\n", arg_regs[i]);
-        }
-
-        int align = stack_offset % 16;
-        if (align != 0)
-        {
-            // 関数呼び出し時のRSPは16Bアラインされている必要がある
-            printf("  sub rsp, 8\t\t# 16B align\n");
-            stack_offset += 8;
-        }
-
-        printf("  call %s\n", node->name);
-        if (align != 0)
-        {
-            // 呼び出し時にアラインのためずらしたRSPを戻す
-            printf("  add rsp, 8\t\t# restore 16B align\n");
-            stack_offset -= 8;
-        }
-
-        // 戻り値
-        printf("  push rax\n");
+        gen_asm_func_call(node->func);
         return;
     }
     case ND_ASSIGN:
     {
         // 代入式なら、必ず左辺は変数
-        gen_asm_lval(node->lhs);
+        gen_asm_lval(node->lhs->variable);
         gen_asm_expr(node->rhs);
         printf("  pop rdi\n");
         printf("  pop rax\n");
@@ -203,11 +199,11 @@ static void gen_asm_expr(Node *node)
         printf("  push rdi\n");
         return;
     }
-    case ND_IDENT:
+    case ND_VARIABLE:
     {
         // ここは右辺値の識別子
         // 一度左辺値としてpushした値をpopして使う
-        gen_asm_lval(node);
+        gen_asm_lval(node->variable);
         printf("  pop rax\n");
         printf("  mov rax, [rax]\n");
         printf("  push rax\n");
@@ -215,7 +211,7 @@ static void gen_asm_expr(Node *node)
     }
     case ND_ADDR:
     {
-        gen_asm_lval(node->lhs);
+        gen_asm_lval(node->lhs->variable);
         return;
     }
     case ND_DEREF:
@@ -415,7 +411,7 @@ static void gen_asm_stmt(Node *node)
     case ND_VARDEF:
     {
         // 変数の領域確保
-        gen_asm_vardef(node);
+        gen_asm_vardef(node->variable);
         return;
     }
     case ND_STMT:
@@ -451,8 +447,8 @@ void gen_asm(Vector *code)
         stack_offset = 0;
         vars = new_map();
 
-        gen_asm_func_head(funcdef);
-        gen_asm_stmt(funcdef->func_body);
+        gen_asm_func_head(funcdef->func);
+        gen_asm_stmt(funcdef->func->body);
         gen_asm_func_tail();
     }
 

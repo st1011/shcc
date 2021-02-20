@@ -28,17 +28,14 @@ static Token *current_token(Tokens *tks)
 }
 
 // ノード作成のbody
-static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const char *name)
+static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val)
 {
     Node *node = calloc(1, sizeof(Node));
     node->ty = ty;
     node->lhs = lhs;
     node->rhs = rhs;
     node->val = val;
-    node->name = name;
-    node->args = new_vector();
     node->block_stmts = new_vector();
-    node->func_body = 0;
 
     node->condition = 0;
     node->then = 0;
@@ -52,13 +49,13 @@ static Node *new_node_body(NodeType_t ty, Node *lhs, Node *rhs, int val, const c
 // 通常ノード
 static Node *new_node(NodeType_t ty, Node *lhs, Node *rhs)
 {
-    return new_node_body(ty, lhs, rhs, 0, 0);
+    return new_node_body(ty, lhs, rhs, 0);
 }
 
 // 数値ノード
 static Node *new_node_num(int val)
 {
-    return new_node_body(ND_NUM, 0, 0, val, 0);
+    return new_node_body(ND_NUM, 0, 0, val);
 }
 
 // 単項"-"ノード
@@ -68,22 +65,50 @@ static Node *new_node_negative(Node *value)
     return new_node(ND_MINUS, new_node_num(0), value);
 }
 
-// 識別子ノード
-static Node *new_node_ident(const char *name)
+// 変数ノード
+static Node *new_node_variable(const char *name)
 {
-    return new_node_body(ND_IDENT, 0, 0, 0, name);
+    VariableInfo *info = calloc(1, sizeof(VariableInfo));
+    info->name = name;
+
+    Node *node = new_node_body(ND_VARIABLE, 0, 0, 0);
+    node->variable = info;
+    return node;
 }
 
-// 識別子ノード
+// 変数定義ノード
 static Node *new_node_vardef(const char *name)
 {
-    return new_node_body(ND_VARDEF, 0, 0, 0, name);
+    VariableInfo *info = calloc(1, sizeof(VariableInfo));
+    info->name = name;
+
+    Node *node = new_node_body(ND_VARDEF, 0, 0, 0);
+    node->variable = info;
+    return node;
 }
 
 // 関数ノード
 static Node *new_node_funccall(const char *name)
 {
-    return new_node_body(ND_CALL, 0, 0, 0, name);
+    FuncInfo *info = calloc(1, sizeof(FuncInfo));
+    info->name = name;
+    info->args = new_vector();
+
+    Node *node = new_node_body(ND_CALL, 0, 0, 0);
+    node->func = info;
+    return node;
+}
+
+// 関数定義ノード
+static Node *new_node_funcdef(const char *name)
+{
+    FuncInfo *info = calloc(1, sizeof(FuncInfo));
+    info->name = name;
+    info->args = new_vector();
+
+    Node *node = new_node_body(ND_FUNCDEF, 0, 0, 0);
+    node->func = info;
+    return node;
 }
 
 // returnノード
@@ -102,12 +127,6 @@ static Node *new_node_empty_stmt(void)
 static Node *new_node_block(void)
 {
     return new_node(ND_BLOCK, 0, 0);
-}
-
-// 関数定義ノード
-static Node *new_node_funcdef(const char *name)
-{
-    return new_node_body(ND_FUNCDEF, 0, 0, 0, name);
 }
 
 // if-elseノード
@@ -204,7 +223,7 @@ static Node *term(Tokens *tks)
             // 引数
             while (!consume(tks, TK_PRCLOSE))
             {
-                vec_push(node->args, assign(tks));
+                vec_push(node->func->args, assign(tks));
             }
         }
         else
@@ -216,7 +235,7 @@ static Node *term(Tokens *tks)
                 snprintf(msg, 256, "未定義の変数'%s'です", tk->input);
                 error(tks, msg);
             }
-            node = new_node_ident(tk->input);
+            node = new_node_variable(tk->input);
         }
 
         return node;
@@ -684,10 +703,10 @@ static Node *funcdef(Tokens *tks)
         }
         // TODO そろそろスコープを真面目に考えるときが……
         map_puti(tks->variables, tk->input, sizeof(int));
-        vec_push(node->args, tk->input);
+        vec_push(node->func->args, tk->input);
     }
     // 関数定義本体（ブレース内）
-    node->func_body = multi_stmt(tks);
+    node->func->body = multi_stmt(tks);
 
     return node;
 }

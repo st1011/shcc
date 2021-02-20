@@ -59,7 +59,7 @@ typedef enum
     ND_STMT = ';',
 
     ND_NUM = 0x100, // 整数
-    ND_IDENT,       // 識別子
+    ND_VARIABLE,    // 識別子
     ND_VARDEF,      // 変数定義
     ND_CALL,        // 関数呼び出し
     ND_FUNCDEF,     // 関数定義
@@ -106,6 +106,20 @@ typedef struct
     char *input;    // トークン文字列
 } Token;
 
+// 変数
+typedef struct VariableInfo
+{
+    const char *name; // 変数名
+} VariableInfo;
+
+// 関数
+typedef struct FuncInfo
+{
+    const char *name;  // 関数名
+    struct Node *body; // ND_FUNCDEFの定義となるブロック
+    Vector *args;      // 引数
+} FuncInfo;
+
 // 抽象構文木ノード
 typedef struct Node
 {
@@ -113,15 +127,14 @@ typedef struct Node
     struct Node *lhs;
     struct Node *rhs;
     int val;                  // ND_NUMの場合の数値
-    const char *name;         // ND_IDENTの場合の名前
-    Vector *args;             // ND_CALLの引数
     Vector *block_stmts;      // ND_BLOCKを構成する式群
-    struct Node *func_body;   // ND_FUNCDEFの定義となるブロック
     struct Node *condition;   // if / for / while の条件式
     struct Node *then;        // if / for / while で条件を満たすときに実行される文
     struct Node *elsethen;    // if-else で条件を満たさないときに実行される文
     struct Node *initializer; // for の初期化処理
     struct Node *loopexpr;    // for のループ終了時の処理
+    FuncInfo *func;           // 関数情報
+    VariableInfo *variable;   // 型情報
 } Node;
 
 Vector *new_vector(void);

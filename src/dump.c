@@ -80,7 +80,7 @@ void dump_node_list(Vector *code)
 
         if (node->ty == ND_FUNCDEF)
         {
-            dump_node_block(node->func_body->block_stmts);
+            dump_node_block(node->func->body->block_stmts);
         }
     }
 
@@ -107,7 +107,7 @@ void initialize_dump_env(void)
     // ノード用のマップ
     {
         node_map[ND_NUM] = "Num";
-        node_map[ND_IDENT] = "Ident";
+        node_map[ND_VARIABLE] = "Ident";
         node_map[ND_RETURN] = "Ret";
         node_map[ND_IF] = "If";
         node_map[ND_ELSE] = "Else";
