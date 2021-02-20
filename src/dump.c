@@ -94,29 +94,53 @@ void initialize_dump_env(void)
     {
         token_map[TK_NUM] = "Num";
         token_map[TK_IDENT] = "Ident";
+        token_map[TK_INT] = "int";
         token_map[TK_RETURN] = "Ret";
         token_map[TK_IF] = "If";
         token_map[TK_ELSE] = "Else";
+        token_map[TK_FOR] = "For";
+        token_map[TK_WHILE] = "While";
+
         token_map[TK_EQ] = "==";
         token_map[TK_NEQ] = "!=";
         token_map[TK_LESS_EQ] = "<=";
         token_map[TK_GREATER_EQ] = ">=";
-        token_map[TK_EOF] = "EOF";
+
+        token_map[TK_ADD_ASSIGN] = "+=";
+        token_map[TK_SUB_ASSIGN] = "-=";
+        token_map[TK_MUL_ASSIGN] = "*=";
+        token_map[TK_DIV_ASSIGN] = "/=";
+        token_map[TK_MOD_ASSIGN] = "%=";
+
+        token_map[TK_EOF] = " EOF ";
     }
 
     // ノード用のマップ
     {
         node_map[ND_NUM] = "Num";
-        node_map[ND_VARIABLE] = "Ident";
+        node_map[ND_VARIABLE] = "Var";
         node_map[ND_RETURN] = "Ret";
         node_map[ND_IF] = "If";
         node_map[ND_ELSE] = "Else";
+        node_map[ND_FOR] = "For";
+        node_map[ND_WHILE] = "While";
+        node_map[ND_VARDEF] = "VarDef";
+        node_map[ND_CALL] = "Call";
+        node_map[ND_FUNCDEF] = "FnDef";
+        node_map[ND_BLOCK] = "Blk";
+
+        node_map[ND_ASSIGN] = "ASGN";
+        node_map[ND_ADDR] = "&";
+        node_map[ND_DEREF] = "*";
         node_map[ND_EQ] = "==";
         node_map[ND_NEQ] = "!=";
         node_map[ND_LESS_EQ] = "<=";
         node_map[ND_GREATER_EQ] = ">=";
-        node_map[ND_CALL] = "Call";
-        node_map[ND_FUNCDEF] = "FnDef";
-        node_map[ND_BLOCK] = "Blk";
+
+        node_map[ND_ADD_ASSIGN] = "+=";
+        node_map[ND_SUB_ASSIGN] = "-=";
+        node_map[ND_MUL_ASSIGN] = "*=";
+        node_map[ND_DIV_ASSIGN] = "/=";
+        node_map[ND_MOD_ASSIGN] = "%=";
     }
 }
