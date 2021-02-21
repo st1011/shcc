@@ -4,6 +4,7 @@
 
 ```
 global      = funcdef*
+            | vardef ";"
 funcef      = type ident "(" {type ident {" " type ident}} ")" multi_stmt
 vardef      = type ident
 multi_stmt  = "{" {stmt} "}"

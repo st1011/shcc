@@ -159,5 +159,8 @@ try 42 'int main(){int a; a=42;int b; b=&a; return *b;}'
 # dは&bを指しているはず(配列がないので気持ち悪いがこんな感じのテストになる)
 try 42 'int main(){int a; a=41; int b; b=42; int c; c=43; int d; d=&a-8; return *d;}'
 
+try 42 'int g1; int g2; int g3; int main(){g1=2; g2=10; g3=22; return g1*g2+g3;}'
+try 42 'int g1; int foo(){return 42;} int g2; int g3; int main(){g1=2; g2=10; g3=22; return g1*g2+g3;}'
+
 echo OK
 

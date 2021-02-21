@@ -21,6 +21,8 @@ typedef struct
     // [0]: グローバル変数
     // [1]: ローカル変数
     // 以降、スコープを一つ潜るたびにindexが増え、抜けるたびにindexが減る
+    // このベクタはMAPを管理する
+    // MAP<Key:変数名, Value:変数情報>
     Vector *variables;
     // RBPからのオフセット
     //   parserにRBPなんて言葉が出てくるのはあんまりよい気はしないが……
@@ -36,6 +38,31 @@ static Node *multi_stmt(Tokens *tks);
 static Token *current_token(Tokens *tks)
 {
     return tks->tokens->data[tks->pos];
+}
+
+// 変数情報を格納するインスタンスを生成
+static VariableInfo *new_varinfo(VariableType_t ty, bool is_global, const char *name)
+{
+    VariableInfo *info = calloc(1, sizeof(VariableInfo));
+    info->type = ty;
+    info->is_global = is_global;
+    info->name = name;
+    return info;
+}
+
+// ローカル変数情報を格納するインスタンスを生成
+static VariableInfo *new_local_varinfo(VariableType_t ty, const char *name, int offset)
+{
+    VariableInfo *info = new_varinfo(ty, false, name);
+    info->offset = offset;
+    return info;
+}
+
+// グローバル変数情報を格納するインスタンスを生成
+static VariableInfo *new_global_varinfo(VariableType_t ty, const char *name)
+{
+    VariableInfo *info = new_varinfo(ty, true, name);
+    return info;
 }
 
 // ノード生成
@@ -83,24 +110,16 @@ static Node *new_node_negative(Node *value)
 }
 
 // 変数ノード
-static Node *new_node_variable(const char *name, int offset)
+static Node *new_node_variable(VariableInfo *info)
 {
-    VariableInfo *info = calloc(1, sizeof(VariableInfo));
-    info->name = name;
-    info->offset = offset;
-
     Node *node = new_node(ND_VARIABLE);
     node->variable = info;
     return node;
 }
 
 // 変数定義ノード
-static Node *new_node_vardef(const char *name, int offset)
+static Node *new_node_vardef(VariableInfo *info)
 {
-    VariableInfo *info = calloc(1, sizeof(VariableInfo));
-    info->name = name;
-    info->offset = offset;
-
     Node *node = new_node(ND_VARDEF);
     node->variable = info;
     return node;
@@ -199,24 +218,20 @@ static bool is_match_next_token(Tokens *tks, int ty)
     return tk->ty == ty;
 }
 
-// 変数のオフセット値を取得する
-static bool get_variable_offset(Tokens *tks, const char *name, int *offset)
+// 変数情報を取得する
+static VariableInfo *get_variable_info(Tokens *tks, const char *name)
 {
     // よりローカルな方のスコープから探索すればCっぽいスコープ管理になる
     for (int i = tks->variables->len - 1; i >= 0; i--)
     {
-        int *value = (int *)map_get((const Map *)tks->variables->data[i], name);
-        if (value != NULL)
+        VariableInfo *info = (VariableInfo *)map_get((const Map *)tks->variables->data[i], name);
+        if (info != NULL)
         {
-            if (offset != NULL)
-            {
-                *offset = *value;
-            }
-            return true;
+            return info;
         }
     }
 
-    return false;
+    return NULL;
 }
 
 // 変数を宣言可能か？
@@ -279,15 +294,15 @@ static Node *term(Tokens *tks)
         }
         else
         {
-            int offset = 0;
-            if (!get_variable_offset(tks, tk->input, &offset))
+            VariableInfo *info = get_variable_info(tks, tk->input);
+            if (info == NULL)
             {
                 char *msg = calloc(256, sizeof(char));
                 snprintf(msg, 256, "未定義の変数'%s'です", tk->input);
                 error(tks, msg);
             }
 
-            node = new_node_variable(tk->input, offset);
+            node = new_node_variable(info);
         }
 
         return node;
@@ -678,8 +693,9 @@ static Node *stmt(Tokens *tks)
             error(tks, msg);
         }
 
-        map_puti(tks->variables->data[tks->variables->len - 1], tk->input, tks->variable_offset);
-        node = new_node_vardef(tk->input, tks->variable_offset);
+        VariableInfo *info = new_local_varinfo(VT_INT, tk->input, tks->variable_offset);
+        map_put(tks->variables->data[tks->variables->len - 1], info->name, info);
+        node = new_node_vardef(info);
         tks->variable_offset += STACK_UNIT;
     }
     else
@@ -733,7 +749,7 @@ static Node *multi_stmt(Tokens *tks)
 }
 
 // 関数定義
-static Node *funcdef(Tokens *tks)
+static Node *funcdef(Tokens *tks, const char *name)
 {
     int current_scope_depth = tks->variables->len;
 
@@ -744,25 +760,7 @@ static Node *funcdef(Tokens *tks)
     // 関数ごとに変数のオフセットはクリアする
     tks->variable_offset = 0;
 
-    Token *tk = current_token(tks);
-
-    if (!consume(tks, TK_INT))
-    {
-        error(tks, "関数の戻り値が未定義です。");
-    }
-
-    tk = current_token(tks);
-    if (!consume(tks, TK_IDENT))
-    {
-        error(tks, "top階層に関数が見つかりません");
-    }
-
-    Node *node = new_node_funcdef(tk->input);
-
-    if (!consume(tks, TK_PROPEN))
-    {
-        error(tks, "top階層に関数が見つかりません");
-    }
+    Node *node = new_node_funcdef(name);
 
     // 仮引数
     while (!consume(tks, TK_PRCLOSE))
@@ -772,7 +770,7 @@ static Node *funcdef(Tokens *tks)
             error(tks, "仮引数の型が未定義です。");
         }
 
-        tk = current_token(tks);
+        Token *tk = current_token(tks);
         if (!consume(tks, TK_IDENT))
         {
             error(tks, "仮引数の宣言が不正です");
@@ -786,10 +784,12 @@ static Node *funcdef(Tokens *tks)
         }
 
         // うーん、引数もきちんとマッピングしておかないと後々困りそうな……
-        map_puti(local_variables, tk->input, tks->variable_offset);
+        VariableInfo *info = new_local_varinfo(VT_INT, tk->input, tks->variable_offset);
+        map_put(local_variables, info->name, info);
         tks->variable_offset += STACK_UNIT;
         vec_push(node->func->args, tk->input);
     }
+
     // 関数定義本体（ブレース内）
     node->func->body = multi_stmt(tks);
     node->func->stack_size = tks->variable_offset;
@@ -798,11 +798,61 @@ static Node *funcdef(Tokens *tks)
     return node;
 }
 
+// グローバル領域の定義
+// 関数と変数
+static Node *global(Tokens *tks)
+{
+    Node *node = NULL;
+
+    if (!consume(tks, TK_INT))
+    {
+        error(tks, "関数の戻り値または変数の型が未定義です。");
+    }
+
+    Token *tk = current_token(tks);
+    if (!consume(tks, TK_IDENT))
+    {
+        error(tks, "関数名か変数名が見つかりません");
+    }
+
+    const char *name = tk->input;
+    if (consume(tks, TK_PROPEN))
+    {
+        // 関数っぽい
+        node = funcdef(tks, name);
+    }
+    else if (consume(tks, TK_STMT))
+    {
+        // 変数っぽい
+        if (!can_declaration_variable(tks, name))
+        {
+            char *msg = calloc(256, sizeof(char));
+            snprintf(msg, 256, "定義済みの変数'%s'です", name);
+            error(tks, msg);
+        }
+
+        VariableInfo *info = new_global_varinfo(VT_INT, name);
+        map_put(tks->variables->data[tks->variables->len - 1], info->name, info);
+        node = new_node_vardef(info);
+        // tks->variable_offset += STACK_UNIT;
+    }
+    else
+    {
+        // よく分からない
+        error(tks, "グローバルの定義が不正です。");
+    }
+
+    return node;
+}
+
 // プログラム全体のノード作成
 Vector *program(Vector *token_list)
 {
     Vector *code = new_vector();
     Vector *variables = new_vector();
+    // グローバル変数MAPをつくる
+    Map *global_variables = new_map();
+    vec_push(variables, global_variables);
 
     Tokens tokens = {
         .tokens = token_list,
@@ -817,7 +867,7 @@ Vector *program(Vector *token_list)
             break;
         }
 
-        vec_push(code, funcdef(&tokens));
+        vec_push(code, global(&tokens));
     }
 
     vec_push(code, NULL);

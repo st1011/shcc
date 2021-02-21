@@ -38,6 +38,7 @@ void gen_asm_epilog(void)
 static void gen_asm_func_head(FuncInfo *func)
 {
     puts("");
+    printf(".text\n");
     printf(".global %s\n", func->name);
     printf("%s:\n", func->name);
 
@@ -103,18 +104,42 @@ static void error(const char *msg)
 // 該当アドレスをpush
 static void gen_asm_lval(VariableInfo *variable)
 {
-    printf("  # %s = [RBP-%d]\n", variable->name, variable->offset + STACK_UNIT);
-    printf("  mov rax, rbp\n");
-    printf("  sub rax, %d\n", variable->offset + STACK_UNIT);
-    printf("  push rax\t\t# var addr\n");
+    if (variable->is_global)
+    {
+        printf("  lea rax, %s[rip]\n", variable->name);
+        printf("  push rax\t\t# Address('%s')\n", variable->name);
+    }
+    else
+    {
+        printf("  mov rax, rbp\n");
+        printf("  sub rax, %d\n", variable->offset + STACK_UNIT);
+        printf("  push rax\t\t# Address('%s') = [RBP-%d]\n", variable->name, variable->offset + STACK_UNIT);
+    }
 }
 
-// 変数を定義のアセンブリ出力
-//  ≒ 変数用のスタックを確保する
-static void gen_asm_vardef(VariableInfo *variable)
+// ローカル変数定義のアセンブリ出力
+//  ≒ 変数用のスタックを確保するが、現在は特にすることはない
+static void gen_asm_lvardef(VariableInfo *variable)
 {
+    assert(!variable->is_global);
     printf("  # New variable '%s' = [RBP-%d]\n", variable->name, variable->offset + STACK_UNIT);
     // 関数の先頭で一括スタック待避しているのでここでは実際の操作は行なわない
+}
+
+// グローバル変数定義のアセンブリ出力
+static void gen_asm_gvardef(VariableInfo *variable)
+{
+    assert(variable->is_global);
+
+    printf(".global %s\n", variable->name);
+    // 今は明示的な初期化のない変数しかないので
+    printf(".data\n");
+    printf(".align %d\n", STACK_UNIT);
+    printf(".size %s, %d\n", variable->name, STACK_UNIT);
+    printf("%s:\n", variable->name);
+    // とりあえずスタックサイズを確保してゼロクリア
+    printf("  .zero %d\n", STACK_UNIT);
+    puts("");
 }
 
 // 関数呼び出しのアセンブリ出力
@@ -382,7 +407,7 @@ static void gen_asm_stmt(Node *node)
     case ND_VARDEF:
     {
         // 変数の領域確保
-        gen_asm_vardef(node->variable);
+        gen_asm_lvardef(node->variable);
         return;
     }
     case ND_STMT:
@@ -408,15 +433,26 @@ void gen_asm(Vector *code)
     // プロローグ
     gen_asm_prologue();
 
-    // 1ループ1関数定義
+    // 先にdataセクションだけ書き出してもよいのだけれど、
+    // まあ不都合が出てきたら考える
     for (int i = 0; code->data[i]; i++)
     {
-        Node *funcdef = code->data[i];
-        assert(funcdef->ty == ND_FUNCDEF);
+        Node *node = code->data[i];
 
-        gen_asm_func_head(funcdef->func);
-        gen_asm_stmt(funcdef->func->body);
-        gen_asm_func_tail();
+        if (node->ty == ND_FUNCDEF)
+        {
+            gen_asm_func_head(node->func);
+            gen_asm_stmt(node->func->body);
+            gen_asm_func_tail();
+        }
+        else if (node->ty == ND_VARDEF)
+        {
+            gen_asm_gvardef(node->variable);
+        }
+        else
+        {
+            error("グローバル領域には存在しないはずのノードです。");
+        }
     }
 
     // エピローグ

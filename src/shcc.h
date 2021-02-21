@@ -106,11 +106,20 @@ typedef struct
     char *input;    // トークン文字列
 } Token;
 
+// 変数の型
+typedef enum
+{
+    VT_INVALID,
+    VT_INT,
+} VariableType_t;
+
 // 変数
 typedef struct VariableInfo
 {
-    const char *name; // 変数名
-    int offset;       // RBPからのオフセット
+    VariableType_t type; // 変数の型
+    const char *name;    // 変数名
+    int offset;          // RBPからのオフセット
+    bool is_global;      // グローバル変数か
 } VariableInfo;
 
 // 関数
